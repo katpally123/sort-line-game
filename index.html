@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>Sort Line – Side Pallets + Trickle Scanner</title>
+<title>Sort Line – Top/Bottom Pallets + Trickle Scanner + Error Tips</title>
 <style>
 :root{
   --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af;
@@ -13,21 +13,19 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .btn{background:#1f2937;border:0;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700}
 .game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
 
-/* 3-column stage: left pallets | belt | right pallets */
-.stage{display:grid;grid-template-columns:1.05fr 2fr 1.05fr;gap:8px;align-items:stretch}
-.stage>div{background:#0a0f1a;border-radius:12px}
-
-.palletCol{display:grid;grid-template-rows:1fr;align-items:center}
-.palletRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px}
+/* 3 rows: Top pallets | Conveyor | Bottom pallets */
+.stage{display:grid;grid-template-rows:150px 340px 150px;gap:8px}
+.rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.palletRow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px;width:100%}
 .pallet{
-  position:relative; min-height:100px; border-radius:12px;
-  background:linear-gradient(#0a1220,#0b1626); border:2px dashed #334155;
-  display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;
+  position:relative; aspect-ratio:1/1; /* square */
+  border-radius:12px; background:linear-gradient(#0a1220,#0b1626);
+  border:2px dashed #334155; display:flex;align-items:center;justify-content:center;gap:10px;
 }
 .pallet.good{box-shadow:0 0 0 2px var(--good) inset}
 .pallet h3{position:absolute;top:6px;left:8px;margin:0;font-size:12px;color:var(--muted)}
 .boxStack{
-  width:70%; height:64px; border-radius:10px; background:
+  width:64px; height:64px; border-radius:10px; background:
     repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);
   border:1px solid #334155;
 }
@@ -39,7 +37,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 }
 
 /* Conveyor */
-.conveyor{position:relative; overflow:hidden}
+.conveyor{position:relative;background:#0a0f1a;border-radius:12px;overflow:hidden}
 .belt{
   position:absolute; inset:0;
   background:repeating-linear-gradient(90deg,#0d1322 0 90px,#111a2c 90px 100px);
@@ -47,31 +45,34 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .beltEdge:before,.beltEdge:after{content:"";position:absolute;left:0;right:0;height:6px;background:#000;opacity:.25}
 .beltEdge:before{top:0}.beltEdge:after{bottom:0}
 
-/* Scanner moved far to the right (ahead of pallets visually) */
+/* Start/End markers */
+.marker{position:absolute;top:10px;font-size:12px;color:#cbd5e1;background:#111827;border:1px solid #334155;padding:2px 8px;border-radius:8px}
+.marker.start{left:8px}
+.marker.end{right:8px}
+
+/* Scanner ahead of pallets (near right) */
 .scanner{
-  position:absolute; top:12px; bottom:48px; left:78%; width:12px;
+  position:absolute; top:18%; bottom:22%; left:80%; width:12px;
   background:linear-gradient(#0b3a22,#28a46a,#0b3a22);
-  box-shadow:0 0 28px 10px rgba(34,197,94,.35);
-  border-radius:6px;
+  box-shadow:0 0 28px 10px rgba(34,197,94,.35); border-radius:6px;
 }
-.sLabel{
-  position:absolute; top:-14px; left:-24px; font-size:12px; padding:3px 8px;
-  border-radius:8px; background:#052e17; color:#a7f3d0; border:1px solid #14532d
-}
-.trickle{position:absolute; top:10px; left:18px; font-size:12px; padding:3px 8px;
+.sLabel{position:absolute; top:-16px; left:-30px; font-size:12px; padding:3px 8px;
+  border-radius:8px; background:#052e17; color:#a7f3d0; border:1px solid #14532d}
+.trickle{position:absolute; top:8px; left:18px; font-size:12px; padding:3px 8px;
   border-radius:8px; background:#052e17; color:#a7f3d0; opacity:0; transition:opacity .25s}
 .trickle.show{opacity:1}
 
 /* QA lane along the bottom of belt */
 .qa{
-  position:absolute; left:0; right:0; bottom:6px; height:38px;
+  position:absolute; left:0; right:0; bottom:6px; height:40px;
   border-top:2px dashed #856404; background:rgba(245,158,11,.08);
   display:flex; align-items:center; gap:8px; padding-left:10px; font-size:12px; color:#fcd34d
 }
 
 /* Cases */
 .case{
-  position:absolute; top:42%; width:92px;height:60px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:100px;height:64px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;
   display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none
 }
 .tag{font-size:13px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
@@ -80,7 +81,15 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .def{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--warn);color:#111827;font-weight:900}
 .ghost{opacity:.7;outline:2px dashed #94a3b8}
 
-.feed{max-height:90px;overflow:auto;color:#a1a1aa;font-size:12px;background:#0a0f1a;border-radius:12px;padding:8px}
+/* Pop-up (error tips) */
+.toast{
+  position:fixed; left:50%; top:16px; transform:translateX(-50%);
+  background:#111827; border:1px solid #334155; color:#e5e7eb;
+  padding:10px 12px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+  max-width:92vw; z-index:9999; font-size:14px; line-height:1.25
+}
+.toast strong{display:block; margin-bottom:4px}
+.toast small{color:#9ca3af}
 </style>
 </head><body>
 <div class="wrap">
@@ -93,72 +102,100 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   </div>
 
   <div class="game stage">
-    <!-- LEFT PALLETS (one row) -->
-    <div class="palletCol">
-      <div id="leftRow" class="palletRow"></div>
+    <!-- TOP PALLETS -->
+    <div class="rowBox">
+      <div id="topRow" class="palletRow"></div>
     </div>
 
-    <!-- CONVEYOR CENTER -->
-    <div class="conveyor">
-      <div class="belt"></div>
-      <div class="beltEdge"></div>
+    <!-- CONVEYOR -->
+    <div class="conveyor" id="belt">
+      <div class="belt"></div><div class="beltEdge"></div>
+      <div class="marker start">Start of Line</div>
+      <div class="marker end">End of Line</div>
+
       <div class="scanner">
         <div class="sLabel">Trickle Scanner</div>
         <div id="trickle" class="trickle">Trickle scan</div>
       </div>
+
       <div id="qaLane" class="qa">QA lane: drop defective cases here first</div>
       <!-- cases render here -->
     </div>
 
-    <!-- RIGHT PALLETS (one row) -->
-    <div class="palletCol">
-      <div id="rightRow" class="palletRow"></div>
+    <!-- BOTTOM PALLETS -->
+    <div class="rowBox">
+      <div id="bottomRow" class="palletRow"></div>
     </div>
   </div>
-
-  <div id="feed" class="feed"></div>
 </div>
 
 <script>
 (()=>{
-  // Destinations: left/right single rows
-  const DESTS_LEFT  = ["YYC4","YVR2","YEG2"];
-  const DESTS_RIGHT = ["YVR4","YXX1","YXX2"];
-  const ALL_DESTS = [...DESTS_LEFT, ...DESTS_RIGHT];
+  // A) Destinations (top vs bottom; "opposite each other")
+  const DESTS_TOP    = ["YYC4","YVR2","YEG2"];
+  const DESTS_BOTTOM = ["YVR4","YXX1","YXX2"];
+  const ALL_DESTS = [...DESTS_TOP, ...DESTS_BOTTOM];
 
-  const belt=document.querySelector('.conveyor');
+  const belt=document.getElementById('belt');
   const qaLane=document.getElementById('qaLane');
   const trickle=document.getElementById('trickle');
-  const leftRow=document.getElementById('leftRow');
-  const rightRow=document.getElementById('rightRow');
+  const topRow=document.getElementById('topRow');
+  const bottomRow=document.getElementById('bottomRow');
 
   const startBtn=document.getElementById('start');
   const timeEl=document.getElementById('time');
   const scoreEl=document.getElementById('score');
   const mistakesEl=document.getElementById('mistakes');
-  const feedEl=document.getElementById('feed');
 
-  // Build pallets (one row each side)
+  // Build pallets
   function mkPallet(name, rowEl){
     const p=document.createElement('div');
     p.className='pallet'; p.dataset.dest=name;
-    p.innerHTML=`<h3>${name}</h3><div class="qr" aria-hidden="true"></div><div class="boxStack" aria-hidden="true"></div>`;
+    p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="boxStack"></div>`;
     rowEl.appendChild(p);
     return p;
   }
   const pallets=[];
-  DESTS_LEFT.forEach(d=>pallets.push(mkPallet(d,leftRow)));
-  DESTS_RIGHT.forEach(d=>pallets.push(mkPallet(d,rightRow)));
+  DESTS_TOP.forEach(d=>pallets.push(mkPallet(d,topRow)));
+  DESTS_BOTTOM.forEach(d=>pallets.push(mkPallet(d,bottomRow)));
 
+  // B) Error definitions (lettered)
+  const ERROR_TIPS = {
+    MIS_SORT: {
+      title: "A) Mis-sort",
+      desc: "Case dropped on the wrong destination. Tip: read the code out loud, then place."
+    },
+    DEFECT_SHIPPED: {
+      title: "B) Defect Shipped",
+      desc: "Defective case sent to pallet without QA. Tip: drop into the QA lane first, then pallet (+2)."
+    },
+    QA_NOT_NEEDED: {
+      title: "C) QA Not Needed",
+      desc: "QA used for a clean case. Tip: only use QA if the case shows a defect tag."
+    },
+    UNSORTED_LEFT: {
+      title: "D) Left the Line",
+      desc: "Case reached end-of-line without being sorted. Tip: act early; drag while it’s moving."
+    }
+  };
+
+  function toast(key){
+    const t=document.createElement('div');
+    t.className='toast';
+    const {title,desc}=ERROR_TIPS[key];
+    t.innerHTML=`<strong>${title}</strong><small>${desc}</small>`;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2600);
+  }
+
+  // Game state
   const st={
     running:false,tLeft:90,timer:null,
     score:0,mistakes:0,
-    pxPerSec:80,          // ↓ slower conveyor movement
-    spawnEveryMs:1500,    // ↓ slower infeed
+    pxPerSec:80,          // slower belt
+    spawnEveryMs:1500,    // slower infeed
     lastSpawn:0, boxes:[], nextId:1, scannerX:0
   };
-
-  const log=(m)=>{const d=document.createElement('div');d.textContent=m;feedEl.prepend(d);};
 
   function makeBox(){
     const dest=ALL_DESTS[Math.floor(Math.random()*ALL_DESTS.length)];
@@ -213,12 +250,21 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
       const drop=findDrop(e.clientX,e.clientY);
       if(drop?.type==='pallet'){
         const destTarget=drop.node.dataset.dest;
-        if(box.hasDefect && !box.inspected){ st.score-=2; st.mistakes++; log(`❌ DEFECT shipped to ${destTarget}. Needed QA first.`); removeBox(box); }
-        else if(destTarget===box.dest){ st.score+=(box.inspected?2:1); log(`✅ ${box.dest} (+${box.inspected?2:1}).`); removeBox(box); }
-        else { st.score-=1; st.mistakes++; log(`❌ Mis-sort to ${destTarget}; needed ${box.dest}.`); removeBox(box); }
+        if(box.hasDefect && !box.inspected){
+          st.score-=2; st.mistakes++;
+          toast('DEFECT_SHIPPED');
+          removeBox(box);
+        } else if(destTarget===box.dest){
+          st.score+=(box.inspected?2:1);
+          removeBox(box);
+        } else {
+          st.score-=1; st.mistakes++;
+          toast('MIS_SORT');
+          removeBox(box);
+        }
       } else if(drop?.type==='qa'){
-        if(box.hasDefect && !box.inspected){ box.inspected=true; log('🔧 QA: defect fixed.'); }
-        else { log('ℹ️ QA not needed.'); }
+        if(box.hasDefect && !box.inspected){ box.inspected=true; }
+        else { toast('QA_NOT_NEEDED'); }
       }
       scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights();
     };
@@ -231,13 +277,20 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   function removeBox(b){ b.el?.remove(); st.boxes=st.boxes.filter(x=>x.id!==b.id); }
 
   function findDrop(x,y){
-    for(const p of pallets){ const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p}; }
-    const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
+    // pallets
+    for(const p of document.querySelectorAll('.pallet')){
+      const r=p.getBoundingClientRect();
+      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p};
+    }
+    // qa lane
+    const q=qaLane.getBoundingClientRect();
+    if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
     return null;
   }
   function highlightAt(x,y){ clearHighlights(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b'; }
   function clearHighlights(){ document.querySelectorAll('.pallet').forEach(p=>p.classList.remove('good')); qaLane.style.outline='none'; }
 
+  // Loop
   function animate(ts){
     if(!st.running) return;
     if(!st.lastSpawn) st.lastSpawn=ts;
@@ -245,7 +298,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     const dt=1/60, step=st.pxPerSec*dt;
 
     const beltR=belt.getBoundingClientRect();
-    st.scannerX = beltR.left + beltR.width*0.78; // same as CSS left:78%
+    st.scannerX = beltR.left + beltR.width*0.80; // matches CSS left:80%
 
     for(const b of st.boxes){
       if(!b.dragging){ b.x += step; positionBox(b); }
@@ -253,11 +306,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
         const r=b.el.getBoundingClientRect();
         if(r.left < st.scannerX && r.right >= st.scannerX){
           b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'), 350);
-          log(`🟢 Trickle scan: ${b.revealed?b.dest:'(hidden)'} — Box ${b.id}`);
         }
       }
       if(b.el && b.el.getBoundingClientRect().right >= beltR.right-6){
-        st.mistakes++; st.score-=1; log('⚠️ Case left the line unsorted (-1).'); removeBox(b);
+        st.mistakes++; st.score-=1; toast('UNSORTED_LEFT'); removeBox(b);
       }
     }
     requestAnimationFrame(animate);
@@ -265,13 +317,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 
   function tick(){ st.tLeft-=1; timeEl.textContent=st.tLeft; if(st.tLeft<=0) end(); }
   function start(){
-    st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1; feedEl.innerHTML="";
+    st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1;
     scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
     Array.from(document.querySelectorAll('.case')).forEach(n=>n.remove());
     startBtn.disabled=true; startBtn.textContent='Running…';
     st.timer=setInterval(tick,1000); requestAnimationFrame(animate);
   }
-  function end(){ st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)'; log(`Summary → Score ${st.score}, Mistakes ${st.mistakes}`); }
+  function end(){ st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)'; }
   startBtn.addEventListener('click', start);
 })();
 </script>
