@@ -1,11 +1,14 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>Sort Line — 3 Levels (Visual Pilot)</title>
+<title>Sort Line — 3 Levels (5ft Belt • Scanner 30%)</title>
 <style>
 :root{
   --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --rail:#1e293b;
   --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444;
-  --ftpx:8px; --palletSize:32px; /* computed from belt width + feet */
+  /* computed at runtime */
+  --ftpx:8px;          /* pixels per foot */
+  --beltHeight:260px;  /* visual 5 ft belt + QA strip */
+  --palletSize:140px;  /* 4ft pallet scaled up a bit */
 }
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
 .wrap{max-width:1280px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
@@ -18,10 +21,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .link{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:8px 12px;color:#e5e7eb}
 .game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
 
-/* Layout: pallets at END (top & bottom) with long conveyor in middle */
-.stage{display:grid;grid-template-rows:170px minmax(400px,46vh) 170px;gap:8px}
+/* Layout: pallets at END (top/bottom) with a 5ft conveyor in the middle */
+.stage{display:grid;grid-template-rows:170px var(--beltHeight) 170px;gap:8px}
 .rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;overflow:hidden}
-.palletRow{display:inline-grid;grid-template-columns:repeat(3,var(--palletSize));gap:calc(var(--ftpx)*0.6);padding:12px;margin-right:14px}
+.palletRow{display:inline-grid;grid-template-columns:repeat(3,var(--palletSize));gap:calc(var(--ftpx)*0.9);padding:12px;margin-right:14px}
 .pallet{
   position:relative;width:var(--palletSize);height:var(--palletSize);border-radius:12px;
   background:linear-gradient(#0a1220,#0b1626);border:2px dashed #334155;
@@ -35,20 +38,24 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .qr.scan{animation:scanflash .35s ease-out}
 @keyframes scanflash{0%{box-shadow:0 0 0 1px #94a3b8 inset}30%{box-shadow:0 0 18px 6px rgba(34,197,94,.45);background-color:rgba(34,197,94,.15)}100%{box-shadow:0 0 0 1px #94a3b8 inset;background-color:transparent}}
 
-/* Conveyor (roller look), Start/End & Trickle Scanner */
+/* Conveyor (roller look) */
 .conveyor{position:relative;background:#0a0f1a;border-radius:12px;overflow:hidden}
 .rollers{position:absolute;inset:0;background:repeating-linear-gradient(90deg,#c7ccd4 0 18px,#aab1bb 18px 20px,#8e97a3 20px 22px);filter:saturate(.9) brightness(.9)}
 .rail{position:absolute;top:0;bottom:0;width:14px;background:var(--rail);opacity:.9}
 .rail.left{left:0}.rail.right{right:0}
 .marker{position:absolute;top:10px;font-size:12px;color:#cbd5e1;background:#111827;border:1px solid #334155;padding:2px 8px;border-radius:8px;z-index:2}
 .marker.start{left:10px}.marker.end{right:10px}
-.scanner{position:absolute;top:16%;bottom:22%;left:80%;width:12px;z-index:1;background:linear-gradient(#0b3a22,#28a46a,#0b3a22);box-shadow:0 0 28px 10px rgba(34,197,94,.35);border-radius:6px}
+
+/* Trickle Scanner at 30% from Start */
+.scanner{position:absolute;top:16%;bottom:22%;left:30%;width:12px;z-index:1;background:linear-gradient(#0b3a22,#28a46a,#0b3a22);box-shadow:0 0 28px 10px rgba(34,197,94,.35);border-radius:6px}
 .sLabel{position:absolute;top:-16px;left:-34px;font-size:12px;padding:3px 8px;border-radius:8px;background:#052e17;color:#a7f3d0;border:1px solid #14532d}
 .trickle{position:absolute;top:8px;left:18px;font-size:12px;padding:3px 8px;border-radius:8px;background:#052e17;color:#a7f3d0;opacity:0;transition:opacity .25s}
 .trickle.show{opacity:1}
+
+/* QA lane (thin strip along bottom of belt) */
 .qa{position:absolute;left:0;right:0;bottom:6px;height:calc(var(--ftpx)*2.5);border-top:2px dashed #856404;background:rgba(245,158,11,.08);display:flex;align-items:center;gap:8px;padding-left:10px;font-size:12px;color:#fcd34d;z-index:2}
 
-/* Cases */
+/* Cases (smaller than pallets) */
 .case{position:absolute;top:50%;transform:translateY(-50%);width:104px;height:66px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none}
 .tag{font-size:13px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
 .hiddenTag{filter:blur(6px)}.hint{font-size:11px;color:#9ca3af}
@@ -116,21 +123,24 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button id="apply" class="btn">Apply</button>
     <button id="close" class="link">Close</button>
   </div>
-  <div class="small">Changes are saved per level and remembered on this device.</div>
+  <div class="small">Saved per level (local to this device).</div>
 </div>
 
 <script>
 (()=>{
-// ====== CONFIG (3 levels) ======
-const LINE_FEET = 120, PALLET_FEET = 4;
+// ===== DIMENSIONS =====
+const LINE_FEET = 120;   // visual length
+const BELT_FEET = 5;     // real belt width
+const PALLET_FEET = 4;   // 4x4 pallets
+
+// ===== LEVELS =====
 const LEVELS = {
   1: { name:"Level 1 — Training",  speed:60,  spawn:1800, top:["YYC4","YVR2","YEG2"], bottom:["YVR4","YXX1","YXX2"] },
   2: { name:"Level 2 — Pro",       speed:90,  spawn:1300, top:["YYZ1","YVR2","YYC4"], bottom:["YEG2","YVR4","YXX2"] },
   3: { name:"Level 3 — Rush",      speed:120, spawn:900,  top:["YVR4","YXX2","YEG2"], bottom:["YYC4","YYZ1","YVR2"] }
 };
-// you can change these defaults anytime; users can also edit in the panel
 
-// ====== DOM ======
+// ===== DOM =====
 const belt = document.getElementById('belt'),
       qaLane = document.getElementById('qaLane'),
       trickle = document.getElementById('trickle'),
@@ -151,97 +161,90 @@ const editBtn = document.getElementById('edit'),
 
 const levelButtons = Array.from(document.querySelectorAll('.lbtn'));
 
-// ====== State ======
+// ===== STATE =====
 let level = 1;
 const st = {
   running:false, tLeft:90, timer:null, score:0, mistakes:0,
   pxPerSec:60, spawnEveryMs:1800, lastSpawn:0, boxes:[], nextId:1, scannerX:0
 };
-const pallets = []; // DOM nodes
 
-// ====== Helpers ======
-const ALL_PALLETS = () => [...document.querySelectorAll('.pallet')];
-
+// ===== SCALE (feet → pixels) =====
 function setScale(){
   const w = belt.getBoundingClientRect().width;
-  const ftpx = w / LINE_FEET;
+  const ftpx = w / LINE_FEET; // px per foot across the line
   document.documentElement.style.setProperty('--ftpx', ftpx + 'px');
-  document.documentElement.style.setProperty('--palletSize', (PALLET_FEET * ftpx) + 'px');
+
+  // 5ft belt + ~1.5ft QA strip = visual belt height
+  const beltHeight = (BELT_FEET * ftpx) + (1.5 * ftpx);
+  document.documentElement.style.setProperty('--beltHeight', beltHeight + 'px');
+
+  // pallet size: 4ft scaled up ~35% so it's clearly larger than cases (min 120px)
+  const palletPx = Math.max(120, PALLET_FEET * ftpx * 1.35);
+  document.documentElement.style.setProperty('--palletSize', palletPx + 'px');
 }
 window.addEventListener('resize', setScale);
 
-// Build pallets once
+// ===== PALLETS =====
 function mkPallet(name, rowEl){
-  const p = document.createElement('div');
+  const p=document.createElement('div');
   p.className='pallet'; p.dataset.dest=name;
-  p.innerHTML = `<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;
+  p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;
   rowEl.appendChild(p);
-  pallets.push(p);
 }
-function buildRows(top, bottom){
-  topRow.innerHTML = ''; bottomRow.innerHTML = ''; pallets.length = 0;
-  top.forEach(d=>mkPallet(d, topRow));
-  bottom.forEach(d=>mkPallet(d, bottomRow));
+function buildRows(top,bottom){
+  topRow.innerHTML=''; bottomRow.innerHTML='';
+  top.forEach(d=>mkPallet(d,topRow));
+  bottom.forEach(d=>mkPallet(d,bottomRow));
 }
-function updateRowLabels(top, bottom){
-  [...topRow.children].forEach((n,i)=>{ n.dataset.dest = top[i]; n.querySelector('h3').textContent = top[i]; flash(n); });
-  [...bottomRow.children].forEach((n,i)=>{ n.dataset.dest = bottom[i]; n.querySelector('h3').textContent = bottom[i]; flash(n); });
+function updateRowLabels(top,bottom){
+  [...topRow.children].forEach((n,i)=>{ n.dataset.dest=top[i]; n.querySelector('h3').textContent=top[i]; flash(n); });
+  [...bottomRow.children].forEach((n,i)=>{ n.dataset.dest=bottom[i]; n.querySelector('h3').textContent=bottom[i]; flash(n); });
 }
-function flash(node){ node.style.outline='2px solid #22c55e'; setTimeout(()=>node.style.outline='none', 600); }
+function flash(node){ node.style.outline='2px solid #22c55e'; setTimeout(()=>node.style.outline='none',600); }
+const ALL_PALLETS = ()=>[...document.querySelectorAll('.pallet')];
 
-function setLevel(newLevel, restart=true){
-  level = newLevel;
-  // merge defaults with any saved overrides
-  const conf = getLevelConfig(level);
-  st.pxPerSec = conf.speed;
-  st.spawnEveryMs = conf.spawn;
-  updateRowLabels(conf.top, conf.bottom);
-
-  levelButtons.forEach(b=>b.classList.toggle('active', +b.dataset.level===level));
+// ===== LEVEL CONFIG =====
+function getLevelConfig(lvl){
+  const key='sl_level_'+lvl;
+  const saved=JSON.parse(localStorage.getItem(key)||'{}');
+  const base=LEVELS[lvl];
+  return {name:base.name, speed:saved.speed??base.speed, spawn:saved.spawn??base.spawn, top:saved.top??base.top, bottom:saved.bottom??base.bottom};
+}
+function saveLevelConfig(lvl,cfg){ localStorage.setItem('sl_level_'+lvl, JSON.stringify(cfg)); }
+function setLevel(newLevel,restart=true){
+  level=newLevel;
+  const cfg=getLevelConfig(level);
+  st.pxPerSec=cfg.speed; st.spawnEveryMs=cfg.spawn;
+  updateRowLabels(cfg.top,cfg.bottom);
+  levelButtons.forEach(b=>b.classList.toggle('active',+b.dataset.level===level));
   if(restart){ end(); start(); }
 }
 
-function getLevelConfig(lvl){
-  const key = 'sl_level_'+lvl;
-  const saved = JSON.parse(localStorage.getItem(key)||'{}');
-  const base = LEVELS[lvl];
-  return {
-    name: base.name,
-    speed: saved.speed ?? base.speed,
-    spawn: saved.spawn ?? base.spawn,
-    top:   saved.top   ?? base.top,
-    bottom:saved.bottom?? base.bottom
-  };
-}
-function saveLevelConfig(lvl, cfg){
-  localStorage.setItem('sl_level_'+lvl, JSON.stringify(cfg));
-}
-
-// ====== Edit panel ======
+// ===== EDIT PANEL =====
 function openPanel(){
-  const cfg = getLevelConfig(level);
-  panelLevel.textContent = cfg.name;
-  [t1.value,t2.value,t3.value] = cfg.top;
-  [b1.value,b2.value,b3.value] = cfg.bottom;
+  const cfg=getLevelConfig(level);
+  panelLevel.textContent=cfg.name;
+  [t1.value,t2.value,t3.value]=cfg.top;
+  [b1.value,b2.value,b3.value]=cfg.bottom;
   panel.style.display='block';
 }
 function closePanel(){ panel.style.display='none'; }
-applyBtn.onclick = ()=>{
-  const cfg = getLevelConfig(level);
-  const newCfg = {...cfg, top:[t1.value,t2.value,t3.value], bottom:[b1.value,b2.value,b3.value]};
-  saveLevelConfig(level, newCfg);
-  updateRowLabels(newCfg.top, newCfg.bottom);
+applyBtn.onclick=()=>{
+  const cfg=getLevelConfig(level);
+  const newCfg={...cfg, top:[t1.value,t2.value,t3.value], bottom:[b1.value,b2.value,b3.value]};
+  saveLevelConfig(level,newCfg);
+  updateRowLabels(newCfg.top,newCfg.bottom);
   closePanel();
 };
-editBtn.onclick = openPanel; closeBtn.onclick = closePanel;
+editBtn.onclick=openPanel; closeBtn.onclick=closePanel;
 
-// ====== Game bits (visual pilot) ======
+// ===== GAME (visual) =====
 function makeBox(){
-  const cfg = getLevelConfig(level);
-  const all = [...cfg.top, ...cfg.bottom];
-  const dest = all[Math.floor(Math.random()*all.length)];
-  const hasDefect = Math.random() < 0.2;
-  return {id:st.nextId++, dest, hasDefect, inspected:false, x:14, el:null, dragging:false, scanned:false, revealed:false};
+  const cfg=getLevelConfig(level);
+  const all=[...cfg.top,...cfg.bottom];
+  const dest=all[Math.floor(Math.random()*all.length)];
+  const hasDefect=Math.random()<0.2;
+  return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false,revealed:false};
 }
 function renderBox(b){
   const el=document.createElement('div');
@@ -250,13 +253,8 @@ function renderBox(b){
   belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);
 }
 function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
-function reveal(b){
-  if(b.revealed) return;
-  b.revealed=true;
-  const tag=b.el.querySelector('.tag'); tag.classList.remove('hiddenTag');
-  tag.querySelector('.lbl').textContent=b.dest;
-  b.el.querySelector('.hint')?.remove();
-}
+function reveal(b){ if(b.revealed) return; b.revealed=true; const t=b.el.querySelector('.tag'); t.classList.remove('hiddenTag'); t.querySelector('.lbl').textContent=b.dest; b.el.querySelector('.hint')?.remove(); }
+
 function findDrop(x,y){
   for(const p of ALL_PALLETS()){ const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p}; }
   const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
@@ -267,7 +265,10 @@ function highlightAt(x,y){ clearHighlights(); const t=findDrop(x,y); if(t?.type=
 
 function enableDrag(box){
   let ghost=null,sx=0,sy=0,ox=0,oy=0,drag=false; const el=box.el;
-  const down=e=>{ if(!st.running) return; reveal(box); drag=true; box.dragging=true; el.setPointerCapture(e.pointerId); const r=el.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top; ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost); highlightAt(e.clientX,e.clientY); };
+  const down=e=>{ if(!st.running) return; reveal(box); drag=true; box.dragging=true; el.setPointerCapture(e.pointerId);
+    const r=el.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+    ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999;
+    document.body.appendChild(ghost); highlightAt(e.clientX,e.clientY); };
   const move=e=>{ if(!drag||!ghost) return; const dx=e.clientX-sx, dy=e.clientY-sy; ghost.style.left=(ox+dx)+'px'; ghost.style.top=(oy+dy)+'px'; highlightAt(e.clientX,e.clientY); };
   const up=e=>{
     if(!drag) return; drag=false; box.dragging=false; if(ghost){ghost.remove(); ghost=null;}
@@ -278,7 +279,7 @@ function enableDrag(box){
       else if(destTarget===box.dest){ st.score+=(box.inspected?2:1); const qr=drop.node.querySelector('.qr'); qr.classList.remove('scan'); void qr.offsetWidth; qr.classList.add('scan'); removeBox(box); }
       else { st.score-=1; st.mistakes++; removeBox(box); }
     } else if(drop?.type==='qa'){
-      if(box.hasDefect && !box.inspected){ box.inspected=true; } // visual pilot: no popup yet
+      if(box.hasDefect && !box.inspected){ box.inspected=true; }
     }
     scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights();
   };
@@ -290,9 +291,11 @@ function animate(ts){
   if(!st.running) return;
   if(!st.lastSpawn) st.lastSpawn = ts;
   if(ts - st.lastSpawn >= st.spawnEveryMs){ const b=makeBox(); st.boxes.push(b); renderBox(b); st.lastSpawn = ts; }
+
   const dt=1/60, step = st.pxPerSec * dt;
   const rB = belt.getBoundingClientRect();
-  st.scannerX = rB.left + rB.width*0.80;
+  st.scannerX = rB.left + rB.width * 0.30;   // ← 30% from start
+
   for(const b of st.boxes){
     if(!b.dragging){ b.x += step; positionBox(b); }
     if(!b.scanned){
@@ -311,6 +314,8 @@ function animate(ts){
 function tick(){ st.tLeft -= 1; timeEl.textContent = st.tLeft; if(st.tLeft<=0) end(); }
 function start(){
   setScale();
+  const cfg=getLevelConfig(level);
+  if(!topRow.children.length) buildRows(cfg.top,cfg.bottom);
   st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1;
   scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
   Array.from(document.querySelectorAll('.case')).forEach(n=>n.remove());
