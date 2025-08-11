@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Sort Line Showdown (Mobile)</title>
+<style>
+  :root { --bg:#0f172a; --panel:#111827; --text:#eef2ff; --muted:#94a3b8; --good:#16a34a; --bad:#ef4444; --warn:#f59e0b; }
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;}
+  .wrap{display:flex;flex-direction:column;gap:10px;padding:12px;max-width:900px;margin:0 auto;}
+  .hud{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .card{background:var(--panel);border-radius:12px;padding:10px}
+  .btn{background:#1f2937;border:none;color:var(--text);padding:10px 14px;border-radius:10px;font-weight:600}
+  .btn:active{transform:scale(.98)}
+  .stat{min-width:70px;text-align:center}
+  .board{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:700px){.board{grid-template-columns:1fr 1fr}}
+  .zone{position:relative;min-height:180px;border:2px dashed #334155;border-radius:12px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;padding:8px}
+  .zone h3{margin:0 0 6px 0;font-size:14px;color:var(--muted);position:absolute;top:6px;left:8px}
+  .zone.qa{border-color:var(--warn)}
+  .zone.good{box-shadow:0 0 0 2px var(--good) inset}
+  .zone.bad{box-shadow:0 0 0 2px var(--bad) inset}
+  .spawn{display:flex;gap:8px;flex-wrap:wrap}
+  .box{touch-action:none;user-select:none;-webkit-user-drag:none;background:#0b1220;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-weight:700;display:inline-flex;gap:8px;align-items:center}
+  .box .tag{font-size:12px;font-weight:800;padding:2px 6px;border-radius:6px;background:#1f2937;color:#cbd5e1}
+  .box .def{font-size:12px;background:var(--warn);color:#111827;border-radius:6px;padding:2px 6px}
+  .ghost{opacity:.6;outline:2px dashed #64748b}
+  .feed{font-size:13px;color:var(--muted);max-height:80px;overflow:auto}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:#cbd5e1}
+  .pill{padding:2px 8px;border-radius:999px;background:#1f2937}
+  .pill.good{background:#052e17;color:#a7f3d0}
+  .pill.bad{background:#3b0a0a;color:#fecaca}
+  .pill.qa{background:#331b00;color:#fcd34d}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud card">
+    <button id="start" class="btn">Start Round (60s)</button>
+    <div class="stat">⏱ <span id="time">60</span>s</div>
+    <div class="stat">✅ <span id="score">0</span></div>
+    <div class="stat">❌ <span id="mistakes">0</span></div>
+    <div class="legend">
+      <span class="pill good">+1 correct</span>
+      <span class="pill qa">+2 defect caught via QA</span>
+      <span class="pill bad">-1 mis-sort</span>
+      <span class="pill bad">-2 defect shipped</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <strong>How to play:</strong> Drag a box to its pallet by <em>DEST</em> (A/B/C/D). If it shows <span class="pill qa">DEFECT</span>,
+    send it to <b>QA</b> first, then to the correct pallet. Fast = more boxes, careful = fewer mistakes.
+  </div>
+
+  <div class="board">
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">Spawn</h2>
+      <div id="spawn" class="spawn"></div>
+      <div class="feed" id="feed"></div>
+    </div>
+
+    <div class="zones">
+      <div class="zone qa" data-zone="QA"><h3>QA (inspect defects first)</h3></div>
+      <div style="height:10px"></div>
+      <div class="zone" data-zone="A"><h3>Pallet A</h3></div>
+      <div class="zone" data-zone="B"><h3>Pallet B</h3></div>
+      <div class="zone" data-zone="C"><h3>Pallet C</h3></div>
+      <div class="zone" data-zone="D"><h3>Pallet D</h3></div>
+    </div>
+  </div>
+
+  <div class="card" id="summary" style="display:none"></div>
+</div>
+
+<script>
+(() => {
+  const spawnEl = document.getElementById('spawn');
+  const timeEl = document.getElementById('time');
+  const scoreEl = document.getElementById('score');
+  const mistakesEl = document.getElementById('mistakes');
+  const feedEl = document.getElementById('feed');
+  const summaryEl = document.getElementById('summary');
+  const startBtn = document.getElementById('start');
+  const ZONES = ["QA","A","B","C","D"];
+
+  let state = {
+    running:false, tLeft:60, timer:null,
+    score:0, mistakes:0, shipped:0, correctedQA:0, correctNoDefect:0,
+    boxes:[], nextId:1
+  };
+
+  // Utility
+  const rand = (n)=>Math.floor(Math.random()*n);
+  const log = (msg)=>{ const p=document.createElement('div'); p.textContent=msg; feedEl.prepend(p); };
+
+  function makeBox() {
+    // 25% defects; random destination
+    const dest = ["A","B","C","D"][rand(4)];
+    const hasDefect = Math.random() < 0.25;
+    return { id: state.nextId++, dest, hasDefect, inspected:false, at:"SPAWN" };
+  }
+
+  function renderSpawn() {
+    spawnEl.innerHTML = "";
+    state.boxes.filter(b=>b.at==="SPAWN").slice(0,6).forEach(b=>{
+      spawnEl.appendChild(renderBoxEl(b));
+    });
+  }
+
+  function renderBoxEl(b){
+    const el = document.createElement('div');
+    el.className = 'box';
+    el.setAttribute('data-id', b.id);
+    el.innerHTML = `<span class="tag">DEST: ${b.dest}</span>${b.hasDefect ? `<span class="def">DEFECT</span>`:''}`;
+    enableDrag(el);
+    return el;
+  }
+
+  // Drag with Pointer Events (mobile-friendly)
+  function enableDrag(el){
+    let id = +el.getAttribute('data-id');
+    let startX=0, startY=0, oX=0, oY=0, dragging=false;
+    let ghost;
+
+    const onDown=(e)=>{
+      if(!state.running) return;
+      dragging=true;
+      el.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect();
+      startX=e.clientX; startY=e.clientY; oX=r.left; oY=r.top;
+      ghost=el.cloneNode(true); ghost.classList.add('ghost');
+      ghost.style.position='fixed'; ghost.style.left=oX+'px'; ghost.style.top=oY+'px'; ghost.style.zIndex=9999;
+      document.body.appendChild(ghost);
+    };
+    const onMove=(e)=>{
+      if(!dragging||!ghost) return;
+      const dx=e.clientX-startX, dy=e.clientY-startY;
+      ghost.style.left=(oX+dx)+'px';
+      ghost.style.top=(oY+dy)+'px';
+      highlightHover(e.clientX, e.clientY);
+    };
+    const onUp=(e)=>{
+      if(!dragging) return;
+      dragging=false;
+      if(ghost){ ghost.remove(); ghost=null; }
+      clearHighlights();
+      dropAt(e.clientX,e.clientY,id);
+    };
+
+    el.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function highlightHover(x,y){
+    document.querySelectorAll('.zone').forEach(z=>{
+      const r=z.getBoundingClientRect();
+      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) z.classList.add('good'); else z.classList.remove('good');
+    });
+  }
+  function clearHighlights(){ document.querySelectorAll('.zone').forEach(z=>z.classList.remove('good','bad')); }
+
+  function dropAt(x,y,id){
+    const target = Array.from(document.querySelectorAll('.zone')).find(z=>{
+      const r=z.getBoundingClientRect();
+      return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;
+    });
+    const box = state.boxes.find(b=>b.id===id);
+    if(!box) return;
+
+    if(!target){
+      // no drop zone: return to spawn
+      box.at="SPAWN"; renderSpawn(); return;
+    }
+    const zone = target.getAttribute('data-zone');
+
+    if(zone==="QA"){
+      if(box.hasDefect && !box.inspected){
+        box.inspected = true; // “fixed”
+        log(`🔍 Box ${box.id} inspected in QA`);
+        // After QA, send it back to spawn for final sort
+        box.at="SPAWN"; renderSpawn();
+        return;
+      } else {
+        log(`ℹ️ QA used but no defect to fix for Box ${box.id}`);
+        box.at="SPAWN"; renderSpawn(); return;
+      }
+    }
+
+    // Dropped on a pallet A–D
+    const correct = (zone===box.dest);
+    const defectNeedsQA = box.hasDefect && !box.inspected;
+
+    if(defectNeedsQA){
+      // shipped with defect
+      state.score -= 2; state.mistakes += 1;
+      log(`❌ Box ${box.id} shipped with DEFECT to ${zone} (needed QA first).`);
+    } else if(correct){
+      if(box.hasDefect){ state.score += 2; state.correctedQA += 1; log(`✅ Box ${box.id} correct to ${zone} (+2, QA fixed).`); }
+      else { state.score += 1; state.correctNoDefect += 1; log(`✅ Box ${box.id} correct to ${zone} (+1).`); }
+    } else {
+      state.score -= 1; state.mistakes += 1; log(`❌ Mis-sort Box ${box.id} to ${zone} (dest ${box.dest}).`);
+    }
+
+    // remove box from play
+    state.boxes = state.boxes.filter(b=>b.id!==box.id);
+    scoreEl.textContent = state.score;
+    mistakesEl.textContent = state.mistakes;
+
+    // keep spawn topped up
+    while(state.running && state.boxes.filter(b=>b.at==="SPAWN").length<6){
+      state.boxes.push(makeBox());
+    }
+    renderSpawn();
+  }
+
+  function spawnInitial(){
+    state.boxes = [];
+    for(let i=0;i<8;i++) state.boxes.push(makeBox());
+    renderSpawn();
+  }
+
+  function endRound(){
+    state.running=false; clearInterval(state.timer); state.timer=null;
+    document.querySelectorAll('.zone').forEach(z=>z.classList.remove('good','bad'));
+    summaryEl.style.display='block';
+    const total = state.correctNoDefect + state.correctedQA + state.mistakes;
+    summaryEl.innerHTML = `
+      <h3 style="margin:0 0 8px 0">Round Summary</h3>
+      <div>Score: <b>${state.score}</b></div>
+      <div>Correct (no defect): <b>${state.correctNoDefect}</b></div>
+      <div>Correct via QA: <b>${state.correctedQA}</b></div>
+      <div>Mistakes: <b>${state.mistakes}</b></div>
+      <div>Throughput handled: <b>${total}</b> boxes</div>
+      <div style="margin-top:6px;color:#cbd5e1">Tip: Defects must touch QA before pallet.</div>
+    `;
+    startBtn.disabled=false; startBtn.textContent="Start Round (60s)";
+  }
+
+  function tick(){
+    state.tLeft -= 1; timeEl.textContent = state.tLeft;
+    // Add occasional new boxes
+    if(state.tLeft % 5 === 0) state.boxes.push(makeBox());
+    renderSpawn();
+    if(state.tLeft<=0) endRound();
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    // reset
+    state = { running:true,tLeft:60,timer:null,score:0,mistakes:0,shipped:0,correctedQA:0,correctNoDefect:0,boxes:[],nextId:1 };
+    feedEl.innerHTML=""; summaryEl.style.display='none';
+    scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='60';
+    spawnInitial();
+    startBtn.disabled=true; startBtn.textContent="Running…";
+    state.timer = setInterval(tick,1000);
+  });
+
+  // Ready
+  spawnInitial();
+})();
+</script>
+</body>
+</html>
