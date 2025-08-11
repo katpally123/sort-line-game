@@ -1,336 +1,149 @@
 <!doctype html><html lang="en"><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>Sort Line — Roller Belt + Top/Bottom Pallets</title>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Sort Line — Pallets at Start</title>
 <style>
-:root{
-  --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af;
-  --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444; --rail:#1e293b;
-}
+:root{--bg:#0b1220;--panel:#0f172a;--text:#e5e7eb;--muted:#9ca3af;--scan:#22c55e;--warn:#f59e0b;--good:#16a34a;--bad:#ef4444;--rail:#1e293b}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
 .wrap{max-width:1280px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
 .hud{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border-radius:12px;padding:10px}
 .btn{background:#1f2937;border:0;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700}
 .game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
 
-/* Layout: TOP pallets | CONVEYOR (taller) | BOTTOM pallets */
-.stage{display:grid;grid-template-rows:160px minmax(360px,42vh) 160px;gap:10px}
-.rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:center}
-.palletRow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px;width:100%}
-
-/* Pallets: square with QR tile + stack */
-.pallet{
-  position:relative; aspect-ratio:1/1; border-radius:12px;
-  background:linear-gradient(#0a1220,#0b1626); border:2px dashed #334155;
-  display:flex;align-items:center;justify-content:center;gap:12px; isolation:isolate;
-}
+/* Layout: TOP pallets | CONVEYOR (tall/long) | BOTTOM pallets */
+.stage{display:grid;grid-template-rows:150px minmax(380px,44vh) 150px;gap:8px}
+.rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:flex-start;overflow:hidden}
+.palletRow{display:inline-grid;grid-template-columns:repeat(3,110px);gap:10px;padding:10px;margin-left:14px} /* cluster left near Start */
+.pallet{position:relative;aspect-ratio:1/1;border-radius:12px;background:linear-gradient(#0a1220,#0b1626);border:2px dashed #334155;display:flex;align-items:center;justify-content:center;gap:10px}
 .pallet.good{box-shadow:0 0 0 2px var(--good) inset}
 .pallet h3{position:absolute;top:6px;left:8px;margin:0;font-size:12px;color:var(--muted)}
-.stack{
-  width:70px;height:68px;border-radius:10px;
-  background:repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);
-  border:1px solid #334155;
-}
-.qr{
-  width:30px;height:30px;border-radius:4px;box-shadow:0 0 0 1px #94a3b8 inset;
-  background:
-    repeating-linear-gradient(0deg,#0f172a 0 3px,#e5e7eb 3px 6px),
-    repeating-linear-gradient(90deg,#0f172a 0 3px,#e5e7eb 3px 6px);
-}
+.stack{width:64px;height:64px;border-radius:10px;background:repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);border:1px solid #334155}
+.qr{width:28px;height:28px;border-radius:4px;box-shadow:0 0 0 1px #94a3b8 inset;background:
+  repeating-linear-gradient(0deg,#0f172a 0 3px,#e5e7eb 3px 6px),
+  repeating-linear-gradient(90deg,#0f172a 0 3px,#e5e7eb 3px 6px)}
 .qr.scan{animation:scanflash .35s ease-out}
-@keyframes scanflash{
-  0%{box-shadow:0 0 0 1px #94a3b8 inset,0 0 0 0 rgba(34,197,94,.0); background-color:transparent}
-  30%{box-shadow:0 0 0 1px #94a3b8 inset,0 0 18px 6px rgba(34,197,94,.45); background-color:rgba(34,197,94,.15)}
-  100%{box-shadow:0 0 0 1px #94a3b8 inset,0 0 0 0 rgba(34,197,94,0); background-color:transparent}
-}
+@keyframes scanflash{0%{box-shadow:0 0 0 1px #94a3b8 inset}30%{box-shadow:0 0 18px 6px rgba(34,197,94,.45);background-color:rgba(34,197,94,.15)}100%{box-shadow:0 0 0 1px #94a3b8 inset;background-color:transparent}}
 
-/* Conveyor — roller look + rails + legs */
+/* Conveyor — roller look */
 .conveyor{position:relative;background:#0a0f1a;border-radius:12px;overflow:hidden}
-.rollers{
-  position:absolute; inset:0;
-  /* silver rollers every 22px with seams */
-  background:
-    repeating-linear-gradient(90deg, #c7ccd4 0 18px, #aab1bb 18px 20px, #8e97a3 20px 22px);
-  filter:saturate(.9) brightness(.9);
-}
-.rail{
-  position:absolute; top:0; bottom:0; width:14px; background:var(--rail);
-  box-shadow:inset -2px 0 0 #0b1220; opacity:.9
-}
+.rollers{position:absolute;inset:0;background:repeating-linear-gradient(90deg,#c7ccd4 0 18px,#aab1bb 18px 20px,#8e97a3 20px 22px);filter:saturate(.9) brightness(.9)}
+.rail{position:absolute;top:0;bottom:0;width:14px;background:var(--rail);opacity:.9}
 .rail.left{left:0} .rail.right{right:0}
-.legs{position:absolute; inset:0; pointer-events:none}
-.legs:before,.legs:after{
-  content:""; position:absolute; top:8%; bottom:8%; width:2px; background:#0b0f18;
-  left:8%; box-shadow:
-    12% 0 0 0 #0b0f18, 24% 0 0 0 #0b0f18, 36% 0 0 0 #0b0f18,
-    48% 0 0 0 #0b0f18, 60% 0 0 0 #0b0f18, 72% 0 0 0 #0b0f18, 84% 0 0 0 #0b0f18;
-  opacity:.35
-}
-.legs:after{display:none} /* visual only */
-
-/* Start/End markers */
 .marker{position:absolute;top:10px;font-size:12px;color:#cbd5e1;background:#111827;border:1px solid #334155;padding:2px 8px;border-radius:8px;z-index:2}
-.marker.start{left:10px}
-.marker.end{right:10px}
-
-/* Trickle scanner near end */
-.scanner{
-  position:absolute; top:16%; bottom:22%; left:82%; width:12px; z-index:1;
-  background:linear-gradient(#0b3a22,#28a46a,#0b3a22);
-  box-shadow:0 0 28px 10px rgba(34,197,94,.35); border-radius:6px;
-}
-.sLabel{position:absolute; top:-16px; left:-34px; font-size:12px; padding:3px 8px;
-  border-radius:8px; background:#052e17; color:#a7f3d0; border:1px solid #14532d}
-.trickle{position:absolute; top:8px; left:18px; font-size:12px; padding:3px 8px;
-  border-radius:8px; background:#052e17; color:#a7f3d0; opacity:0; transition:opacity .25s}
+.marker.start{left:10px} .marker.end{right:10px}
+.scanner{position:absolute;top:16%;bottom:22%;left:80%;width:12px;z-index:1;background:linear-gradient(#0b3a22,#28a46a,#0b3a22);box-shadow:0 0 28px 10px rgba(34,197,94,.35);border-radius:6px}
+.sLabel{position:absolute;top:-16px;left:-34px;font-size:12px;padding:3px 8px;border-radius:8px;background:#052e17;color:#a7f3d0;border:1px solid #14532d}
+.trickle{position:absolute;top:8px;left:18px;font-size:12px;padding:3px 8px;border-radius:8px;background:#052e17;color:#a7f3d0;opacity:0;transition:opacity .25s}
 .trickle.show{opacity:1}
-
-/* QA lane */
-.qa{
-  position:absolute; left:0; right:0; bottom:6px; height:40px;
-  border-top:2px dashed #856404; background:rgba(245,158,11,.08);
-  display:flex; align-items:center; gap:8px; padding-left:10px; font-size:12px; color:#fcd34d; z-index:2
-}
+.qa{position:absolute;left:0;right:0;bottom:6px;height:40px;border-top:2px dashed #856404;background:rgba(245,158,11,.08);display:flex;align-items:center;gap:8px;padding-left:10px;font-size:12px;color:#fcd34d;z-index:2}
 
 /* Cases */
-.case{
-  position:absolute; top:50%; transform:translateY(-50%);
-  width:104px;height:66px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none
-}
+.case{position:absolute;top:50%;transform:translateY(-50%);width:104px;height:66px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none}
 .tag{font-size:13px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
-.hiddenTag{filter:blur(6px)}
-.hint{font-size:11px;color:#9ca3af}
+.hiddenTag{filter:blur(6px)} .hint{font-size:11px;color:#9ca3af}
 .def{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--warn);color:#111827;font-weight:900}
 .ghost{opacity:.75;outline:2px dashed #94a3b8}
 
-/* Pop-up (error tips) */
-.toast{
-  position:fixed; left:50%; top:16px; transform:translateX(-50%);
-  background:#111827; border:1px solid #334155; color:#e5e7eb;
-  padding:10px 12px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.35);
-  max-width:92vw; z-index:9999; font-size:14px; line-height:1.25
-}
-.toast strong{display:block; margin-bottom:4px}
-.toast small{color:#9ca3af}
-.feed{display:none}
+/* Error toast */
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#111827;border:1px solid #334155;color:#e5e7eb;padding:10px 12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:92vw;z-index:9999;font-size:14px}
+.toast strong{display:block;margin-bottom:4px} .toast small{color:#9ca3af}
 </style>
 </head><body>
 <div class="wrap">
   <div class="hud">
     <button id="start" class="btn">Start Shift (90s)</button>
-    <div>⏱ <span id="time">90</span>s</div>
-    <div>✅ <span id="score">0</span></div>
-    <div>❌ <span id="mistakes">0</span></div>
-    <div style="font-size:12px;color:#9ca3af">Touch a case to reveal destination, then drag to the matching pallet. DEFECT must hit QA first.</div>
+    <div>⏱ <span id="time">90</span>s</div><div>✅ <span id="score">0</span></div><div>❌ <span id="mistakes">0</span></div>
+    <div style="font-size:12px;color:#9ca3af">Touch to reveal destination → drag to pallet. DEFECT must hit QA first.</div>
   </div>
 
   <div class="game stage">
-    <!-- TOP PALLETS -->
+    <!-- TOP pallets at START -->
     <div class="rowBox"><div id="topRow" class="palletRow"></div></div>
 
     <!-- CONVEYOR -->
     <div class="conveyor" id="belt">
-      <div class="rollers"></div>
-      <div class="rail left"></div><div class="rail right"></div>
-      <div class="legs"></div>
-
-      <div class="marker start">Start of Line</div>
-      <div class="marker end">End of Line</div>
-
-      <div class="scanner">
-        <div class="sLabel">Trickle Scanner</div>
-        <div id="trickle" class="trickle">Trickle scan</div>
-      </div>
-
+      <div class="rollers"></div><div class="rail left"></div><div class="rail right"></div>
+      <div class="marker start">Start of Line</div><div class="marker end">End of Line</div>
+      <div class="scanner"><div class="sLabel">Trickle Scanner</div><div id="trickle" class="trickle">Trickle scan</div></div>
       <div id="qaLane" class="qa">QA lane: drop defective cases here first</div>
       <!-- cases render here -->
     </div>
 
-    <!-- BOTTOM PALLETS -->
+    <!-- BOTTOM pallets at START (opposite the top) -->
     <div class="rowBox"><div id="bottomRow" class="palletRow"></div></div>
   </div>
 </div>
 
 <script>
 (()=>{
-  // Destinations opposite each other
-  const DESTS_TOP    = ["YYC4","YVR2","YEG2"];
-  const DESTS_BOTTOM = ["YVR4","YXX1","YXX2"];
-  const ALL_DESTS = [...DESTS_TOP, ...DESTS_BOTTOM];
+  // Destinations opposite each other, located at the START
+  const DESTS_TOP=["YYC4","YVR2","YEG2"], DESTS_BOTTOM=["YVR4","YXX1","YXX2"];
+  const ALL=[...DESTS_TOP,...DESTS_BOTTOM];
 
-  const belt=document.getElementById('belt');
-  const qaLane=document.getElementById('qaLane');
-  const trickle=document.getElementById('trickle');
-  const topRow=document.getElementById('topRow');
-  const bottomRow=document.getElementById('bottomRow');
+  const belt=document.getElementById('belt'), qaLane=document.getElementById('qaLane'), trickle=document.getElementById('trickle');
+  const topRow=document.getElementById('topRow'), bottomRow=document.getElementById('bottomRow');
+  const startBtn=document.getElementById('start'), timeEl=document.getElementById('time'), scoreEl=document.getElementById('score'), mistakesEl=document.getElementById('mistakes');
 
-  const startBtn=document.getElementById('start');
-  const timeEl=document.getElementById('time');
-  const scoreEl=document.getElementById('score');
-  const mistakesEl=document.getElementById('mistakes');
+  function mkPallet(name,row){const p=document.createElement('div');p.className='pallet';p.dataset.dest=name;p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;row.appendChild(p);return p}
+  const pallets=[]; DESTS_TOP.forEach(d=>pallets.push(mkPallet(d,topRow))); DESTS_BOTTOM.forEach(d=>pallets.push(mkPallet(d,bottomRow)));
 
-  // Build pallets
-  function mkPallet(name, rowEl){
-    const p=document.createElement('div');
-    p.className='pallet'; p.dataset.dest=name;
-    p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;
-    rowEl.appendChild(p);
-    return p;
-  }
-  const pallets=[];
-  DESTS_TOP.forEach(d=>pallets.push(mkPallet(d,topRow)));
-  DESTS_BOTTOM.forEach(d=>pallets.push(mkPallet(d,bottomRow)));
+  const ERROR_TIPS={MIS_SORT:{title:"A) Mis-sort",desc:"Wrong destination. Tip: read the code out loud, then place."},
+    DEFECT_SHIPPED:{title:"B) Defect Shipped",desc:"Defect sent without QA. Tip: drop into QA first, then pallet (+2)."},
+    QA_NOT_NEEDED:{title:"C) QA Not Needed",desc:"Used QA on a clean case."},
+    UNSORTED_LEFT:{title:"D) Left the Line",desc:"Reached End of Line unsorted. Act early."}};
+  function toast(k){const t=document.createElement('div');t.className='toast';t.innerHTML=`<strong>${ERROR_TIPS[k].title}</strong><small>${ERROR_TIPS[k].desc}</small>`;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 
-  // Error popups
-  const ERROR_TIPS = {
-    MIS_SORT:{title:"A) Mis-sort",desc:"Dropped on the wrong destination. Tip: read the code out loud, then place."},
-    DEFECT_SHIPPED:{title:"B) Defect Shipped",desc:"Defective case sent to pallet without QA. Tip: drop into QA lane first, then pallet (+2)."},
-    QA_NOT_NEEDED:{title:"C) QA Not Needed",desc:"QA used for a clean case. Tip: only use QA if a defect is present."},
-    UNSORTED_LEFT:{title:"D) Left the Line",desc:"Case reached end-of-line unsorted. Tip: act early; drag while moving."}
-  };
-  function toast(key){
-    const t=document.createElement('div'); t.className='toast';
-    const {title,desc}=ERROR_TIPS[key]; t.innerHTML=`<strong>${title}</strong><small>${desc}</small>`;
-    document.body.appendChild(t); setTimeout(()=>t.remove(),2600);
-  }
+  // tiny beep
+  let AC;function beep(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type="square";o.frequency.value=880;g.gain.setValueAtTime(.12,AC.currentTime);o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.18);o.stop(AC.currentTime+.2);}catch(e){}}
 
-  // Tiny WebAudio "beep" (no external file)
-  let AC; function beep(){
-    try{
-      AC = AC || new (window.AudioContext||window.webkitAudioContext)();
-      const o=AC.createOscillator(), g=AC.createGain();
-      o.type="square"; o.frequency.value=880; g.gain.setValueAtTime(0.12, AC.currentTime);
-      o.connect(g); g.connect(AC.destination); o.start();
-      g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime+0.18);
-      o.stop(AC.currentTime+0.2);
-    }catch(e){}
-  }
+  const st={running:false,tLeft:90,timer:null,score:0,mistakes:0,pxPerSec:80,spawnEveryMs:1500,lastSpawn:0,boxes:[],nextId:1,scannerX:0};
 
-  // Game state
-  const st={running:false,tLeft:90,timer:null,score:0,mistakes:0,
-            pxPerSec:80,spawnEveryMs:1500,lastSpawn:0,boxes:[],nextId:1,scannerX:0};
-
-  function makeBox(){
-    const dest=ALL_DESTS[Math.floor(Math.random()*ALL_DESTS.length)];
-    const hasDefect=Math.random()<0.2;
-    return {id:st.nextId++,dest,hasDefect,inspected:false,x:8,el:null,dragging:false,scanned:false,revealed:false};
-  }
-
-  function renderBox(b){
-    const el=document.createElement('div');
-    el.className='case'; el.dataset.id=b.id;
-    el.innerHTML=`
-      <div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>
-      ${b.hasDefect?`<div class="def">DEFECT</div>`:''}
-      <div class="hint">${b.revealed?'':'Touch to reveal'}</div>`;
-    belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);
-  }
-  function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
-  function reveal(b){
-    if(b.revealed) return; b.revealed=true;
-    const tag=b.el.querySelector('.tag'); tag.classList.remove('hiddenTag');
-    tag.querySelector('.lbl').textContent=b.dest;
-    b.el.querySelector('.hint')?.remove();
-  }
+  function makeBox(){const dest=ALL[Math.floor(Math.random()*ALL.length)], hasDefect=Math.random()<0.2; return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false,revealed:false};}
+  function renderBox(b){const el=document.createElement('div');el.className='case';el.dataset.id=b.id;el.innerHTML=`<div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>${b.hasDefect?`<div class="def">DEFECT</div>`:''}<div class="hint">${b.revealed?'':'Touch to reveal'}</div>`;belt.appendChild(el);b.el=el;pos(b);enableDrag(b);}
+  function pos(b){if(b.el) b.el.style.left=(b.x|0)+'px';}
+  function reveal(b){if(b.revealed) return;b.revealed=true;const t=b.el.querySelector('.tag');t.classList.remove('hiddenTag');t.querySelector('.lbl').textContent=b.dest;b.el.querySelector('.hint')?.remove();}
 
   function enableDrag(box){
-    let ghost=null,startX=0,startY=0,oX=0,oY=0,dragged=false;
-    const el=box.el;
-
-    const down=(e)=>{
-      if(!st.running) return;
-      reveal(box);
-      dragged=true; box.dragging=true;
-      el.setPointerCapture(e.pointerId);
-      const r=el.getBoundingClientRect();
-      startX=e.clientX; startY=e.clientY; oX=r.left; oY=r.top;
-      ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed';
-      ghost.style.left=oX+'px'; ghost.style.top=oY+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost);
-      highlight(null);
-    };
-    const move=(e)=>{
-      if(!dragged||!ghost) return;
-      const dx=e.clientX-startX, dy=e.clientY-startY;
-      ghost.style.left=(oX+dx)+'px'; ghost.style.top=(oY+dy)+'px';
-      highlightAt(e.clientX,e.clientY);
-    };
-    const up=(e)=>{
-      if(!dragged) return;
-      dragged=false; box.dragging=false; if(ghost){ghost.remove(); ghost=null;}
-      const drop=findDrop(e.clientX,e.clientY);
-      if(drop?.type==='pallet'){
-        const destTarget=drop.node.dataset.dest;
-        if(box.hasDefect && !box.inspected){
-          st.score-=2; st.mistakes++; toast('DEFECT_SHIPPED'); removeBox(box);
-        } else if(destTarget===box.dest){
-          st.score+=(box.inspected?2:1);
-          // QR “beep” + flash
-          const qr=drop.node.querySelector('.qr'); qr.classList.remove('scan'); void qr.offsetWidth; qr.classList.add('scan'); beep();
-          removeBox(box);
-        } else {
-          st.score-=1; st.mistakes++; toast('MIS_SORT'); removeBox(box);
-        }
-      } else if(drop?.type==='qa'){
-        if(box.hasDefect && !box.inspected){ box.inspected=true; }
-        else { toast('QA_NOT_NEEDED'); }
-      }
-      scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights();
-    };
-
-    el.addEventListener('pointerdown',down);
-    window.addEventListener('pointermove',move);
-    window.addEventListener('pointerup',up);
+    let ghost=null,sx=0,sy=0,ox=0,oy=0,drag=false; const el=box.el;
+    const down=e=>{if(!st.running) return; reveal(box); drag=true; box.dragging=true; el.setPointerCapture(e.pointerId); const r=el.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top; ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost); highlight(null);};
+    const move=e=>{if(!drag||!ghost) return; const dx=e.clientX-sx, dy=e.clientY-sy; ghost.style.left=(ox+dx)+'px'; ghost.style.top=(oy+dy)+'px'; highlightAt(e.clientX,e.clientY);};
+    const up=e=>{if(!drag) return; drag=false; box.dragging=false; if(ghost){ghost.remove(); ghost=null;} const drop=findDrop(e.clientX,e.clientY);
+      if(drop?.type==='pallet'){const destT=drop.node.dataset.dest;
+        if(box.hasDefect && !box.inspected){st.score-=2; st.mistakes++; toast('DEFECT_SHIPPED'); removeBox(box);}
+        else if(destT===box.dest){st.score+=(box.inspected?2:1); const qr=drop.node.querySelector('.qr'); qr.classList.remove('scan'); void qr.offsetWidth; qr.classList.add('scan'); beep(); removeBox(box);}
+        else {st.score-=1; st.mistakes++; toast('MIS_SORT'); removeBox(box);}
+      } else if(drop?.type==='qa'){ if(box.hasDefect && !box.inspected){box.inspected=true;} else {toast('QA_NOT_NEEDED');}}
+      scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHL();};
+    el.addEventListener('pointerdown',down); window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
   }
 
-  function removeBox(b){ b.el?.remove(); st.boxes=st.boxes.filter(x=>x.id!==b.id); }
-  function findDrop(x,y){
-    for(const p of document.querySelectorAll('.pallet')){
-      const r=p.getBoundingClientRect();
-      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p};
-    }
-    const q=qaLane.getBoundingClientRect();
-    if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
-    return null;
-  }
-  function highlightAt(x,y){ clearHighlights(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b'; }
-  function clearHighlights(){ document.querySelectorAll('.pallet').forEach(p=>p.classList.remove('good')); qaLane.style.outline='none'; }
+  function removeBox(b){b.el?.remove(); st.boxes=st.boxes.filter(x=>x.id!==b.id);}
+  function findDrop(x,y){for(const p of document.querySelectorAll('.pallet')){const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p};}
+    const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane}; return null;}
+  function highlightAt(x,y){clearHL(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b';}
+  function clearHL(){document.querySelectorAll('.pallet').forEach(p=>p.classList.remove('good')); qaLane.style.outline='none';}
 
-  // Loop
   function animate(ts){
     if(!st.running) return;
     if(!st.lastSpawn) st.lastSpawn=ts;
-    if(ts-st.lastSpawn>=st.spawnEveryMs){ const b=makeBox(); st.boxes.push(b); renderBox(b); st.lastSpawn=ts; }
+    if(ts-st.lastSpawn>=st.spawnEveryMs){const b=makeBox(); st.boxes.push(b); renderBox(b); st.lastSpawn=ts;}
     const dt=1/60, step=st.pxPerSec*dt;
-
-    const beltR=belt.getBoundingClientRect();
-    st.scannerX = beltR.left + beltR.width*0.82; // matches CSS left:82%
-
+    const rB=belt.getBoundingClientRect(); st.scannerX=rB.left+rB.width*0.80;
     for(const b of st.boxes){
-      if(!b.dragging){ b.x += step; positionBox(b); }
-      if(!b.scanned){
-        const r=b.el.getBoundingClientRect();
-        if(r.left < st.scannerX && r.right >= st.scannerX){
-          b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'), 350);
-        }
-      }
-      if(b.el && b.el.getBoundingClientRect().right >= beltR.right-6){
-        st.mistakes++; st.score-=1; toast('UNSORTED_LEFT'); removeBox(b);
-      }
+      if(!b.dragging){b.x+=step; pos(b);}
+      if(!b.scanned){const r=b.el.getBoundingClientRect(); if(r.left<st.scannerX && r.right>=st.scannerX){b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'),350);}}
+      if(b.el && b.el.getBoundingClientRect().right>=rB.right-6){st.mistakes++; st.score-=1; toast('UNSORTED_LEFT'); removeBox(b);}
     }
     requestAnimationFrame(animate);
   }
 
-  function tick(){ st.tLeft-=1; timeEl.textContent=st.tLeft; if(st.tLeft<=0) end(); }
-  function start(){
-    st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1;
+  function tick(){st.tLeft-=1; timeEl.textContent=st.tLeft; if(st.tLeft<=0) end();}
+  function start(){st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1;
     scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
     Array.from(document.querySelectorAll('.case')).forEach(n=>n.remove());
-    startBtn.disabled=true; startBtn.textContent='Running…';
-    st.timer=setInterval(tick,1000); requestAnimationFrame(animate);
-  }
-  function end(){ st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)'; }
-  startBtn.addEventListener('click', start);
+    startBtn.disabled=true; startBtn.textContent='Running…'; st.timer=setInterval(tick,1000); requestAnimationFrame(animate);}
+  function end(){st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)';}
+
+  startBtn.addEventListener('click',start);
 })();
 </script>
 </body></html>
