@@ -1,111 +1,161 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!doctype html><html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>Sort Line (Top View • Left/Right Pallets)</title>
+<title>Sort Line – Side Pallets + Trickle Scanner</title>
 <style>
-  :root{
-    --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af;
-    --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444;
-  }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
-  .wrap{max-width:1100px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
-  .hud{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border-radius:12px;padding:10px}
-  .btn{background:#1f2937;border:0;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700}
-  .game{background:#0a0f1a;border:1px solid #1f2937;border-radius:14px;overflow:hidden}
-  .stage{display:grid;grid-template-rows:230px 250px}
-  /* Conveyor */
-  .conveyor{position:relative;background:repeating-linear-gradient(90deg,#0d1322 0 90px,#111a2c 90px 100px)}
-  .beltEdge{position:absolute;inset:0;pointer-events:none}
-  .beltEdge:before,.beltEdge:after{content:"";position:absolute;left:0;right:0;height:6px;background:#000;opacity:.25}
-  .beltEdge:before{top:0}.beltEdge:after{bottom:0}
-  .scanner{position:absolute;top:12px;bottom:12px;left:55%;width:10px;background:linear-gradient(#0b3a22,#28a46a,#0b3a22);box-shadow:0 0 20px 6px rgba(34,197,94,.35)}
-  .scanner .label{position:absolute;top:8px;left:12px;background:#052e17;color:#a7f3d0;padding:3px 8px;border-radius:8px;font-size:12px;border:1px solid #14532d}
-  .trickle{position:absolute;top:36px;left:12px;font-size:12px;background:#052e17;color:#a7f3d0;padding:3px 8px;border-radius:8px;opacity:0;transition:opacity .25s}
-  .trickle.show{opacity:1}
-  .qa{position:absolute;left:0;right:0;bottom:6px;height:38px;border-top:2px dashed #856404;background:rgba(245,158,11,.08);display:flex;align-items:center;gap:8px;padding-left:10px;font-size:12px;color:#fcd34d}
-  /* Cases */
-  .case{position:absolute;top:50%;transform:translateY(-50%);width:92px;height:60px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none}
-  .tag{font-size:13px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
-  .hiddenTag{filter:blur(6px)}
-  .hint{font-size:11px;color:#9ca3af}
-  .def{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--warn);color:#111827;font-weight:900}
-  .ghost{opacity:.7;outline:2px dashed #94a3b8}
-  /* Pallets — two columns (left/right), three rows each */
-  .pallets{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#0b1220;padding:10px}
-  .column{display:grid;grid-template-rows:repeat(3,1fr);gap:10px}
-  .pallet{position:relative;min-height:100px;border:2px dashed #334155;border-radius:12px;background:#0a1220}
-  .pallet.good{box-shadow:0 0 0 2px var(--good) inset}
-  .pallet h3{position:absolute;top:6px;left:8px;margin:0;font-size:12px;color:var(--muted)}
-  .feed{max-height:90px;overflow:auto;color:#a1a1aa;font-size:12px}
+:root{
+  --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af;
+  --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444;
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+.hud{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border-radius:12px;padding:10px}
+.btn{background:#1f2937;border:0;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700}
+.game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
+
+/* 3-column stage: left pallets | belt | right pallets */
+.stage{display:grid;grid-template-columns:1.05fr 2fr 1.05fr;gap:8px;align-items:stretch}
+.stage>div{background:#0a0f1a;border-radius:12px}
+
+.palletCol{display:grid;grid-template-rows:1fr;align-items:center}
+.palletRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px}
+.pallet{
+  position:relative; min-height:100px; border-radius:12px;
+  background:linear-gradient(#0a1220,#0b1626); border:2px dashed #334155;
+  display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;
+}
+.pallet.good{box-shadow:0 0 0 2px var(--good) inset}
+.pallet h3{position:absolute;top:6px;left:8px;margin:0;font-size:12px;color:var(--muted)}
+.boxStack{
+  width:70%; height:64px; border-radius:10px; background:
+    repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);
+  border:1px solid #334155;
+}
+.qr{
+  width:28px;height:28px;border-radius:4px;background:
+    repeating-linear-gradient(0deg,#0f172a 0 3px,#e5e7eb 3px 6px),
+    repeating-linear-gradient(90deg,#0f172a 0 3px,#e5e7eb 3px 6px);
+  box-shadow:0 0 0 1px #94a3b8 inset; flex:0 0 auto;
+}
+
+/* Conveyor */
+.conveyor{position:relative; overflow:hidden}
+.belt{
+  position:absolute; inset:0;
+  background:repeating-linear-gradient(90deg,#0d1322 0 90px,#111a2c 90px 100px);
+}
+.beltEdge:before,.beltEdge:after{content:"";position:absolute;left:0;right:0;height:6px;background:#000;opacity:.25}
+.beltEdge:before{top:0}.beltEdge:after{bottom:0}
+
+/* Scanner moved far to the right (ahead of pallets visually) */
+.scanner{
+  position:absolute; top:12px; bottom:48px; left:78%; width:12px;
+  background:linear-gradient(#0b3a22,#28a46a,#0b3a22);
+  box-shadow:0 0 28px 10px rgba(34,197,94,.35);
+  border-radius:6px;
+}
+.sLabel{
+  position:absolute; top:-14px; left:-24px; font-size:12px; padding:3px 8px;
+  border-radius:8px; background:#052e17; color:#a7f3d0; border:1px solid #14532d
+}
+.trickle{position:absolute; top:10px; left:18px; font-size:12px; padding:3px 8px;
+  border-radius:8px; background:#052e17; color:#a7f3d0; opacity:0; transition:opacity .25s}
+.trickle.show{opacity:1}
+
+/* QA lane along the bottom of belt */
+.qa{
+  position:absolute; left:0; right:0; bottom:6px; height:38px;
+  border-top:2px dashed #856404; background:rgba(245,158,11,.08);
+  display:flex; align-items:center; gap:8px; padding-left:10px; font-size:12px; color:#fcd34d
+}
+
+/* Cases */
+.case{
+  position:absolute; top:42%; width:92px;height:60px;border-radius:10px;background:#0c1a2e;border:2px solid #334155;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none
+}
+.tag{font-size:13px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
+.hiddenTag{filter:blur(6px)}
+.hint{font-size:11px;color:#9ca3af}
+.def{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--warn);color:#111827;font-weight:900}
+.ghost{opacity:.7;outline:2px dashed #94a3b8}
+
+.feed{max-height:90px;overflow:auto;color:#a1a1aa;font-size:12px;background:#0a0f1a;border-radius:12px;padding:8px}
 </style>
-</head>
-<body>
+</head><body>
 <div class="wrap">
   <div class="hud">
     <button id="start" class="btn">Start Shift (90s)</button>
     <div>⏱ <span id="time">90</span>s</div>
     <div>✅ <span id="score">0</span></div>
     <div>❌ <span id="mistakes">0</span></div>
-    <div style="font-size:12px;color:#9ca3af">Touch a case to reveal its destination, then drag to the matching pallet. DEFECT must hit QA first.</div>
+    <div style="font-size:12px;color:#9ca3af">Touch a case to reveal destination, then drag to matching pallet. DEFECT must hit QA first.</div>
   </div>
 
   <div class="game stage">
-    <!-- Conveyor -->
-    <div id="belt" class="conveyor">
-      <div class="beltEdge"></div>
-      <div class="scanner"><div class="label">Scanner</div><div id="trickle" class="trickle">Trickle scan</div></div>
-      <div id="qaLane" class="qa">QA lane: drop defective cases here first</div>
+    <!-- LEFT PALLETS (one row) -->
+    <div class="palletCol">
+      <div id="leftRow" class="palletRow"></div>
     </div>
 
-    <!-- Pallets: left/right columns -->
-    <div class="pallets">
-      <div id="leftCol" class="column"></div>
-      <div id="rightCol" class="column"></div>
+    <!-- CONVEYOR CENTER -->
+    <div class="conveyor">
+      <div class="belt"></div>
+      <div class="beltEdge"></div>
+      <div class="scanner">
+        <div class="sLabel">Trickle Scanner</div>
+        <div id="trickle" class="trickle">Trickle scan</div>
+      </div>
+      <div id="qaLane" class="qa">QA lane: drop defective cases here first</div>
+      <!-- cases render here -->
+    </div>
+
+    <!-- RIGHT PALLETS (one row) -->
+    <div class="palletCol">
+      <div id="rightRow" class="palletRow"></div>
     </div>
   </div>
 
-  <div id="summary" class="hud" style="display:none"></div>
-  <div id="feed" class="feed hud"></div>
+  <div id="feed" class="feed"></div>
 </div>
 
 <script>
 (()=>{
-  const DESTS_LEFT  = ["YYC4","YVR2","YEG2"];   // left side
-  const DESTS_RIGHT = ["YVR4","YXX1","YXX2"];   // right side
+  // Destinations: left/right single rows
+  const DESTS_LEFT  = ["YYC4","YVR2","YEG2"];
+  const DESTS_RIGHT = ["YVR4","YXX1","YXX2"];
   const ALL_DESTS = [...DESTS_LEFT, ...DESTS_RIGHT];
 
-  const belt=document.getElementById('belt');
+  const belt=document.querySelector('.conveyor');
   const qaLane=document.getElementById('qaLane');
   const trickle=document.getElementById('trickle');
-  const leftCol=document.getElementById('leftCol');
-  const rightCol=document.getElementById('rightCol');
+  const leftRow=document.getElementById('leftRow');
+  const rightRow=document.getElementById('rightRow');
 
   const startBtn=document.getElementById('start');
   const timeEl=document.getElementById('time');
   const scoreEl=document.getElementById('score');
   const mistakesEl=document.getElementById('mistakes');
   const feedEl=document.getElementById('feed');
-  const summaryEl=document.getElementById('summary');
 
-  // build pallets
-  function mkPallet(name, colEl){
+  // Build pallets (one row each side)
+  function mkPallet(name, rowEl){
     const p=document.createElement('div');
     p.className='pallet'; p.dataset.dest=name;
-    p.innerHTML=`<h3>${name}</h3>`;
-    colEl.appendChild(p);
+    p.innerHTML=`<h3>${name}</h3><div class="qr" aria-hidden="true"></div><div class="boxStack" aria-hidden="true"></div>`;
+    rowEl.appendChild(p);
     return p;
   }
   const pallets=[];
-  DESTS_LEFT.forEach(d=>pallets.push(mkPallet(d,leftCol)));
-  DESTS_RIGHT.forEach(d=>pallets.push(mkPallet(d,rightCol)));
+  DESTS_LEFT.forEach(d=>pallets.push(mkPallet(d,leftRow)));
+  DESTS_RIGHT.forEach(d=>pallets.push(mkPallet(d,rightRow)));
 
-  // game state
   const st={
     running:false,tLeft:90,timer:null,
-    score:0,mistakes:0,pxPerSec:120,spawnEveryMs:1200,lastSpawn:0,
-    boxes:[],nextId:1,scannerX:0
+    score:0,mistakes:0,
+    pxPerSec:80,          // ↓ slower conveyor movement
+    spawnEveryMs:1500,    // ↓ slower infeed
+    lastSpawn:0, boxes:[], nextId:1, scannerX:0
   };
 
   const log=(m)=>{const d=document.createElement('div');d.textContent=m;feedEl.prepend(d);};
@@ -126,15 +176,14 @@
     `;
     belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);
   }
-
   function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
 
-  function reveal(box){
-    if(box.revealed) return;
-    box.revealed=true;
-    const tag=box.el.querySelector('.tag'); tag.classList.remove('hiddenTag');
-    tag.querySelector('.lbl').textContent=box.dest;
-    box.el.querySelector('.hint').remove();
+  function reveal(b){
+    if(b.revealed) return;
+    b.revealed=true;
+    const tag=b.el.querySelector('.tag'); tag.classList.remove('hiddenTag');
+    tag.querySelector('.lbl').textContent=b.dest;
+    b.el.querySelector('.hint')?.remove();
   }
 
   function enableDrag(box){
@@ -143,10 +192,11 @@
 
     const down=(e)=>{
       if(!st.running) return;
-      reveal(box); // reveal on first touch
+      reveal(box);
       dragged=true; box.dragging=true;
       el.setPointerCapture(e.pointerId);
-      const r=el.getBoundingClientRect(); startX=e.clientX; startY=e.clientY; oX=r.left; oY=r.top;
+      const r=el.getBoundingClientRect();
+      startX=e.clientX; startY=e.clientY; oX=r.left; oY=r.top;
       ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed';
       ghost.style.left=oX+'px'; ghost.style.top=oY+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost);
       highlight(null);
@@ -164,7 +214,7 @@
       if(drop?.type==='pallet'){
         const destTarget=drop.node.dataset.dest;
         if(box.hasDefect && !box.inspected){ st.score-=2; st.mistakes++; log(`❌ DEFECT shipped to ${destTarget}. Needed QA first.`); removeBox(box); }
-        else if(destTarget===box.dest){ st.score+= (box.inspected?2:1); log(`✅ ${box.dest} (+${box.inspected?2:1}).`); removeBox(box); }
+        else if(destTarget===box.dest){ st.score+=(box.inspected?2:1); log(`✅ ${box.dest} (+${box.inspected?2:1}).`); removeBox(box); }
         else { st.score-=1; st.mistakes++; log(`❌ Mis-sort to ${destTarget}; needed ${box.dest}.`); removeBox(box); }
       } else if(drop?.type==='qa'){
         if(box.hasDefect && !box.inspected){ box.inspected=true; log('🔧 QA: defect fixed.'); }
@@ -181,21 +231,21 @@
   function removeBox(b){ b.el?.remove(); st.boxes=st.boxes.filter(x=>x.id!==b.id); }
 
   function findDrop(x,y){
-    // pallets
     for(const p of pallets){ const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p}; }
-    // qa
     const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
     return null;
   }
   function highlightAt(x,y){ clearHighlights(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b'; }
-  function clearHighlights(){ pallets.forEach(p=>p.classList.remove('good')); qaLane.style.outline='none'; }
+  function clearHighlights(){ document.querySelectorAll('.pallet').forEach(p=>p.classList.remove('good')); qaLane.style.outline='none'; }
 
   function animate(ts){
     if(!st.running) return;
     if(!st.lastSpawn) st.lastSpawn=ts;
     if(ts-st.lastSpawn>=st.spawnEveryMs){ const b=makeBox(); st.boxes.push(b); renderBox(b); st.lastSpawn=ts; }
     const dt=1/60, step=st.pxPerSec*dt;
-    const beltR=belt.getBoundingClientRect(); st.scannerX=beltR.left + beltR.width*0.55;
+
+    const beltR=belt.getBoundingClientRect();
+    st.scannerX = beltR.left + beltR.width*0.78; // same as CSS left:78%
 
     for(const b of st.boxes){
       if(!b.dragging){ b.x += step; positionBox(b); }
@@ -214,21 +264,15 @@
   }
 
   function tick(){ st.tLeft-=1; timeEl.textContent=st.tLeft; if(st.tLeft<=0) end(); }
-
   function start(){
-    st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1; feedEl.innerHTML=""; summaryEl.style.display='none';
+    st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1; feedEl.innerHTML="";
     scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
     Array.from(document.querySelectorAll('.case')).forEach(n=>n.remove());
     startBtn.disabled=true; startBtn.textContent='Running…';
     st.timer=setInterval(tick,1000); requestAnimationFrame(animate);
   }
-  function end(){
-    st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)';
-    summaryEl.style.display='block'; summaryEl.innerHTML=`<b>Summary:</b> Score <b>${st.score}</b>, Mistakes <b>${st.mistakes}</b>, Cases handled <b>${st.nextId-1}</b>.`;
-  }
-
+  function end(){ st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)'; log(`Summary → Score ${st.score}, Mistakes ${st.mistakes}`); }
   startBtn.addEventListener('click', start);
 })();
 </script>
-</body>
-</html>
+</body></html>
