@@ -1,52 +1,39 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
-<title>Sort Line — Mobile Friendly</title>
+<title>Sort Line — Advance on Pick</title>
 <style>
 :root{
   --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --rail:#1e293b;
   --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444;
-
-  /* computed at runtime */
-  --ftpx:8px;                /* pixels per foot (from belt width / 120ft) */
+  /* runtime */
+  --ftpx:8px;                /* px / foot */
   --beltHeight:260px;        /* ~5ft belt + QA strip */
-  --palletSize:140px;        /* pallet visual (>= case size) */
+  --palletSize:140px;        /* > case size */
   --caseW:104px; --caseH:66px;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
 .wrap{max-width:1280px;margin:calc(env(safe-area-inset-top,0) + 6px) auto 12px auto;padding:8px;display:flex;flex-direction:column;gap:10px}
 .hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel);border-radius:12px;padding:8px 10px}
-.hud > *{font-size:14px}
+.hud>*{font-size:14px}
 .btn,.link,.lbtn{border-radius:10px;border:1px solid #334155;background:#111827;color:#e5e7eb;padding:8px 12px}
 .btn{background:#1f2937;border:0}
 .btn:disabled{opacity:.6}
 .levels{display:flex;gap:6px;margin-left:auto}
 .lbtn.active{outline:2px solid #22c55e}
 
-/* Layout */
 .game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
 .stage{display:grid;grid-template-rows:160px var(--beltHeight) 160px;gap:8px}
 
-/* Pallets at END */
+/* Pallets at END (top/bottom) */
 .rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;overflow:auto hidden;padding-inline:6px}
 .palletRow{display:inline-grid;grid-auto-flow:column;grid-template-columns:repeat(3,var(--palletSize));gap:calc(var(--ftpx)*0.8);padding:10px 6px}
-.pallet{
-  width:var(--palletSize);height:var(--palletSize);border-radius:12px;
-  background:linear-gradient(#0a1220,#0b1626);border:2px dashed #334155;
-  display:flex;align-items:center;justify-content:center;gap:10px;position:relative
-}
+.pallet{width:var(--palletSize);height:var(--palletSize);border-radius:12px;background:linear-gradient(#0a1220,#0b1626);border:2px dashed #334155;display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
 .pallet.good{box-shadow:0 0 0 2px var(--good) inset}
 .pallet h3{position:absolute;top:6px;left:8px;margin:0;font-size:12px;color:#cbd5e1}
-.stack{
-  width:calc(var(--palletSize)*0.6);height:calc(var(--palletSize)*0.6);border-radius:10px;
-  background:repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);
-  border:1px solid #334155
-}
-.qr{
-  width:calc(var(--palletSize)*0.28);height:calc(var(--palletSize)*0.28);border-radius:4px;box-shadow:0 0 0 1px #94a3b8 inset;
-  background:repeating-linear-gradient(0deg,#0f172a 0 3px,#e5e7eb 3px 6px),repeating-linear-gradient(90deg,#0f172a 0 3px,#e5e7eb 3px 6px)
-}
+.stack{width:calc(var(--palletSize)*0.6);height:calc(var(--palletSize)*0.6);border-radius:10px;background:repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);border:1px solid #334155}
+.qr{width:calc(var(--palletSize)*0.28);height:calc(var(--palletSize)*0.28);border-radius:4px;box-shadow:0 0 0 1px #94a3b8 inset;background:repeating-linear-gradient(0deg,#0f172a 0 3px,#e5e7eb 3px 6px),repeating-linear-gradient(90deg,#0f172a 0 3px,#e5e7eb 3px 6px)}
 .qr.scan{animation:scanflash .35s ease-out}
 @keyframes scanflash{0%{box-shadow:0 0 0 1px #94a3b8 inset}30%{box-shadow:0 0 18px 6px rgba(34,197,94,.45);background-color:rgba(34,197,94,.15)}100%{box-shadow:0 0 0 1px #94a3b8 inset;background-color:transparent}}
 
@@ -67,19 +54,14 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 /* QA lane */
 .qa{position:absolute;left:0;right:0;bottom:6px;height:calc(var(--ftpx)*2.2);border-top:2px dashed #856404;background:rgba(245,158,11,.08);display:flex;align-items:center;gap:8px;padding-left:8px;font-size:11px;color:#fcd34d;z-index:2}
 
-/* Cases (scale down on phones) */
-.case{
-  position:absolute;top:50%;transform:translateY(-50%);
-  width:var(--caseW);height:var(--caseH);border-radius:10px;background:#0c1a2e;border:2px solid #334155;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none
-}
+/* Cases */
+.case{position:absolute;top:50%;transform:translateY(-50%);width:var(--caseW);height:var(--caseH);border-radius:10px;background:#0c1a2e;border:2px solid #334155;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none}
 .tag{font-size:12px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
 .hiddenTag{filter:blur(6px)}.hint{font-size:10px;color:#9ca3af}
 .def{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--warn);color:#111827;font-weight:900}
 .ghost{opacity:.75;outline:2px dashed #94a3b8}
 
-/* Responsive tweaks */
-@media (max-width: 560px){
+@media (max-width:560px){
   .hud>*{font-size:12px}
   .lbtn,.btn,.link{padding:7px 10px}
   .stage{grid-template-rows:150px var(--beltHeight) 150px}
@@ -137,6 +119,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 
 <script>
 (()=>{
+/* ===== Dimensions & Levels ===== */
 const LINE_FEET=120, BELT_FEET=5, PALLET_FEET=4;
 const LEVELS={
   1:{name:"Level 1 — Training", speed:60,  spawn:1800, top:["YYC4","YVR2","YEG2"], bottom:["YVR4","YXX1","YXX2"]},
@@ -144,38 +127,29 @@ const LEVELS={
   3:{name:"Level 3 — Rush",     speed:120, spawn:900,  top:["YVR4","YXX2","YEG2"], bottom:["YYC4","YYZ1","YVR2"]}
 };
 
-const belt=document.getElementById('belt'),
-      qaLane=document.getElementById('qaLane'),
-      trickle=document.getElementById('trickle'),
-      topRow=document.getElementById('topRow'),
-      bottomRow=document.getElementById('bottomRow');
-
-const startBtn=document.getElementById('start'),
-      timeEl=document.getElementById('time'),
-      scoreEl=document.getElementById('score'),
-      mistakesEl=document.getElementById('mistakes');
-
-const editBtn=document.getElementById('edit'),
-      panel=document.getElementById('panel'),
-      panelLevel=document.getElementById('panelLevel'),
-      t1=document.getElementById('t1'), t2=document.getElementById('t2'), t3=document.getElementById('t3'),
-      b1=document.getElementById('b1'), b2=document.getElementById('b2'), b3=document.getElementById('b3'),
-      applyBtn=document.getElementById('apply'), closeBtn=document.getElementById('close');
-
+/* ===== DOM ===== */
+const belt=document.getElementById('belt'), qaLane=document.getElementById('qaLane'), trickle=document.getElementById('trickle');
+const topRow=document.getElementById('topRow'), bottomRow=document.getElementById('bottomRow');
+const startBtn=document.getElementById('start'), timeEl=document.getElementById('time'), scoreEl=document.getElementById('score'), mistakesEl=document.getElementById('mistakes');
+const editBtn=document.getElementById('edit'), panel=document.getElementById('panel'), panelLevel=document.getElementById('panelLevel');
+const t1=document.getElementById('t1'), t2=document.getElementById('t2'), t3=document.getElementById('t3'), b1=document.getElementById('b1'), b2=document.getElementById('b2'), b3=document.getElementById('b3');
+const applyBtn=document.getElementById('apply'), closeBtn=document.getElementById('close');
 const levelButtons=[...document.querySelectorAll('.lbtn')];
 
+/* ===== State ===== */
 let level=1;
-const st={running:false,tLeft:90,timer:null,score:0,mistakes:0,pxPerSec:60,spawnEveryMs:1800,lastSpawn:0,boxes:[],nextId:1,scannerX:0};
+const st={
+  running:false, tLeft:90, timer:null, score:0, mistakes:0,
+  pxPerSec:60, spawnEveryMs:1800, lastSpawn:0, boxes:[], nextId:1,
+  scannerX:0, nudgeTicks:0, nudgePerTick:0
+};
 
+/* ===== Scale feet → px ===== */
 function setScale(){
   const w=belt.getBoundingClientRect().width;
-  const ftpx=w/LINE_FEET;
-  document.documentElement.style.setProperty('--ftpx', ftpx+'px');
-  const beltHeight=(BELT_FEET*ftpx)+(1.4*ftpx); // 5ft belt + ~1.4ft QA
-  document.documentElement.style.setProperty('--beltHeight', beltHeight+'px');
-  const palletPx=Math.max(110, PALLET_FEET*ftpx*1.35); // larger than case
-  document.documentElement.style.setProperty('--palletSize', palletPx+'px');
-  // Cases scale a bit on narrow screens
+  const ftpx=w/LINE_FEET; document.documentElement.style.setProperty('--ftpx', ftpx+'px');
+  const beltHeight=(BELT_FEET*ftpx)+(1.4*ftpx); document.documentElement.style.setProperty('--beltHeight', beltHeight+'px');
+  const palletPx=Math.max(110, PALLET_FEET*ftpx*1.35); document.documentElement.style.setProperty('--palletSize', palletPx+'px');
   const caseW=Math.max(70, Math.min(104, window.innerWidth*0.22));
   const caseH=Math.max(48, Math.min(66, window.innerWidth*0.14));
   document.documentElement.style.setProperty('--caseW', caseW+'px');
@@ -183,71 +157,142 @@ function setScale(){
 }
 addEventListener('resize', setScale);
 
+/* ===== Pallets ===== */
 function mkPallet(name,row){const p=document.createElement('div');p.className='pallet';p.dataset.dest=name;p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;row.appendChild(p);}
 function buildRows(top,bottom){topRow.innerHTML='';bottomRow.innerHTML='';top.forEach(d=>mkPallet(d,topRow));bottom.forEach(d=>mkPallet(d,bottomRow));}
 function updateRowLabels(top,bottom){[...topRow.children].forEach((n,i)=>{n.dataset.dest=top[i];n.querySelector('h3').textContent=top[i];flash(n)});[...bottomRow.children].forEach((n,i)=>{n.dataset.dest=bottom[i];n.querySelector('h3').textContent=bottom[i];flash(n)})}
 function flash(n){n.style.outline='2px solid #22c55e';setTimeout(()=>n.style.outline='none',600)}
 const ALL_PALLETS=()=>[...document.querySelectorAll('.pallet')];
 
+/* ===== Level config ===== */
 function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
 function saveLevelConfig(l,c){localStorage.setItem('sl_level_'+l,JSON.stringify(c))}
 function setLevel(newLevel,restart=true){level=newLevel;const cfg=getLevelConfig(level);st.pxPerSec=cfg.speed;st.spawnEveryMs=cfg.spawn;updateRowLabels(cfg.top,cfg.bottom);levelButtons.forEach(b=>b.classList.toggle('active',+b.dataset.level===level));if(restart){end();start();}}
 
-function openPanel(){const cfg=getLevelConfig(level);panelLevel.textContent=cfg.name;[t1.value,t2.value,t3.value]=cfg.top;[b1.value,b2.value,b3.value]=cfg.bottom;panel.style.display='block'}
-function closePanel(){panel.style.display='none'}
-applyBtn.onclick=()=>{const cfg=getLevelConfig(level);const newCfg={...cfg,top:[t1.value,t2.value,t3.value],bottom:[b1.value,b2.value,b3.value]};saveLevelConfig(level,newCfg);updateRowLabels(newCfg.top,newCfg.bottom);closePanel()}
-editBtn.onclick=openPanel; closeBtn.onclick=closePanel;
+/* ===== Game (NEW flow) =====
+   - Cases move until the End-of-Line then stop (b.stopped=true)
+   - When player picks up any case: nudge the belt (short advance) and spawn a new case at Start
+*/
+function makeBox(){
+  const cfg=getLevelConfig(level); const all=[...cfg.top,...cfg.bottom];
+  const dest=all[Math.floor(Math.random()*all.length)]; const hasDefect=Math.random()<0.2;
+  return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false,revealed:false,stopped:false};
+}
+function renderBox(b){
+  const el=document.createElement('div'); el.className='case'; el.dataset.id=b.id;
+  el.innerHTML=`<div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>${b.hasDefect?`<div class="def">DEFECT</div>`:''}<div class="hint">${b.revealed?'':'Touch to reveal'}</div>`;
+  belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);
+}
+function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
+function reveal(b){ if(b.revealed) return; b.revealed=true; const t=b.el.querySelector('.tag'); t.classList.remove('hiddenTag'); t.querySelector('.lbl').textContent=b.dest; b.el.querySelector('.hint')?.remove(); }
 
-function makeBox(){const cfg=getLevelConfig(level);const all=[...cfg.top,...cfg.bottom];const dest=all[Math.floor(Math.random()*all.length)];const hasDefect=Math.random()<0.2;return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false,revealed:false}}
-function renderBox(b){const el=document.createElement('div');el.className='case';el.dataset.id=b.id;el.innerHTML=`<div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>${b.hasDefect?`<div class="def">DEFECT</div>`:''}<div class="hint">${b.revealed?'':'Touch to reveal'}</div>`;belt.appendChild(el);b.el=el;positionBox(b);enableDrag(b)}
-function positionBox(b){if(b.el) b.el.style.left=(b.x|0)+'px'}
-function reveal(b){if(b.revealed) return;b.revealed=true;const t=b.el.querySelector('.tag');t.classList.remove('hiddenTag');t.querySelector('.lbl').textContent=b.dest;b.el.querySelector('.hint')?.remove()}
-function findDrop(x,y){for(const p of ALL_PALLETS()){const r=p.getBoundingClientRect();if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)return {type:'pallet',node:p}}const q=qaLane.getBoundingClientRect();if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom)return {type:'qa',node:qaLane};return null}
-function clearHighlights(){ALL_PALLETS().forEach(p=>p.classList.remove('good'));qaLane.style.outline='none'}
-function highlightAt(x,y){clearHighlights();const t=findDrop(x,y);if(t?.type==='pallet')t.node.classList.add('good');if(t?.type==='qa')qaLane.style.outline='2px solid #f59e0b'}
+function findDrop(x,y){
+  for(const p of ALL_PALLETS()){const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p};}
+  const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
+  return null;
+}
+function clearHighlights(){ALL_PALLETS().forEach(p=>p.classList.remove('good')); qaLane.style.outline='none';}
+function highlightAt(x,y){clearHighlights(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b';}
+
+/* Nudge the whole line forward briefly and spawn a new case at Start */
+function advanceOnPick(){
+  // nudge distance ≈ one small step
+  st.nudgeTicks = 18;
+  st.nudgePerTick = Math.max(1.5, st.pxPerSec/60); // ~a third of normal speed
+  const b = makeBox(); st.boxes.push(b); renderBox(b);
+}
 
 function enableDrag(box){
-  let ghost=null,sx=0,sy=0,ox=0,oy=0,drag=false;const el=box.el;
-  const down=e=>{if(!st.running)return;reveal(box);drag=true;box.dragging=true;el.setPointerCapture(e.pointerId);const r=el.getBoundingClientRect();sx=e.clientX;sy=e.clientY;ox=r.left;oy=r.top;ghost=el.cloneNode(true);ghost.classList.add('ghost');ghost.style.position='fixed';ghost.style.left=ox+'px';ghost.style.top=oy+'px';ghost.style.zIndex=9999;document.body.appendChild(ghost);highlightAt(e.clientX,e.clientY)};
-  const move=e=>{if(!drag||!ghost)return;const dx=e.clientX-sx,dy=e.clientY-sy;ghost.style.left=(ox+dx)+'px';ghost.style.top=(oy+dy)+'px';highlightAt(e.clientX,e.clientY)};
-  const up=e=>{if(!drag)return;drag=false;box.dragging=false;if(ghost){ghost.remove();ghost=null;}const drop=findDrop(e.clientX,e.clientY);
-    if(drop?.type==='pallet'){const destTarget=drop.node.dataset.dest;if(box.hasDefect && !box.inspected){st.score-=2;st.mistakes++;removeBox(box);} else if(destTarget===box.dest){st.score+=(box.inspected?2:1);const qr=drop.node.querySelector('.qr');qr.classList.remove('scan');void qr.offsetWidth;qr.classList.add('scan');removeBox(box);} else {st.score-=1;st.mistakes++;removeBox(box);}}
-    else if(drop?.type==='qa'){if(box.hasDefect && !box.inspected){box.inspected=true;}}
-    scoreEl.textContent=st.score;mistakesEl.textContent=st.mistakes;clearHighlights();
+  let ghost=null,sx=0,sy=0,ox=0,oy=0,drag=false; const el=box.el;
+  const down=e=>{
+    if(!st.running) return;
+    reveal(box);
+    drag=true; box.dragging=true; el.setPointerCapture(e.pointerId);
+    const r=el.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+    ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost);
+    highlightAt(e.clientX,e.clientY);
+    advanceOnPick(); // << trigger belt advance + spawn new case
   };
-  el.addEventListener('pointerdown',down);addEventListener('pointermove',move);addEventListener('pointerup',up);
+  const move=e=>{ if(!drag||!ghost) return; const dx=e.clientX-sx, dy=e.clientY-sy; ghost.style.left=(ox+dx)+'px'; ghost.style.top=(oy+dy)+'px'; highlightAt(e.clientX,e.clientY); };
+  const up=e=>{
+    if(!drag) return; drag=false; box.dragging=false; if(ghost){ghost.remove(); ghost=null;}
+    const drop=findDrop(e.clientX,e.clientY);
+    if(drop?.type==='pallet'){
+      const destTarget=drop.node.dataset.dest;
+      if(box.hasDefect && !box.inspected){ st.score-=2; st.mistakes++; removeBox(box); }
+      else if(destTarget===box.dest){ st.score+=(box.inspected?2:1); const qr=drop.node.querySelector('.qr'); qr.classList.remove('scan'); void qr.offsetWidth; qr.classList.add('scan'); removeBox(box); }
+      else { st.score-=1; st.mistakes++; removeBox(box); }
+    } else if(drop?.type==='qa'){
+      if(box.hasDefect && !box.inspected){ box.inspected=true; } // returns to buffer/end
+    }
+    scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights();
+  };
+  el.addEventListener('pointerdown',down); addEventListener('pointermove',move); addEventListener('pointerup',up);
 }
-function removeBox(b){b.el?.remove();st.boxes=st.boxes.filter(x=>x.id!==b.id)}
+function removeBox(b){ b.el?.remove(); st.boxes = st.boxes.filter(x=>x.id!==b.id); }
 
 function animate(ts){
-  if(!st.running)return;
-  if(!st.lastSpawn)st.lastSpawn=ts;
-  if(ts-st.lastSpawn>=st.spawnEveryMs){const b=makeBox();st.boxes.push(b);renderBox(b);st.lastSpawn=ts}
-  const dt=1/60, step=st.pxPerSec*dt;
-  const rB=belt.getBoundingClientRect(); st.scannerX=rB.left+rB.width*0.30; // 30%
+  if(!st.running) return;
+  if(!st.lastSpawn) st.lastSpawn=ts;
+  // normal trickle spawn still occurs
+  if(ts-st.lastSpawn>=st.spawnEveryMs){ const nb=makeBox(); st.boxes.push(nb); renderBox(nb); st.lastSpawn=ts; }
+
+  const rB=belt.getBoundingClientRect();
+  st.scannerX = rB.left + rB.width*0.30;
+
+  // Optional “nudge” advance after a pick
+  if(st.nudgeTicks>0){
+    for(const b of st.boxes){
+      if(!b.dragging && !b.stopped){
+        b.x += st.nudgePerTick;
+        // clamp just before end
+        const maxRight = rB.width - 6;
+        if((b.x + (b.el?.offsetWidth||0)) >= maxRight){ b.x = maxRight - (b.el?.offsetWidth||0); b.stopped = true; }
+        positionBox(b);
+      }
+    }
+    st.nudgeTicks--;
+  }
+
+  // Continuous movement towards end, but STOP there
+  const step = st.pxPerSec/60;
   for(const b of st.boxes){
-    if(!b.dragging){b.x+=step;positionBox(b)}
-    if(!b.scanned){const r=b.el.getBoundingClientRect();if(r.left<st.scannerX && r.right>=st.scannerX){b.scanned=true;trickle.classList.add('show');setTimeout(()=>trickle.classList.remove('show'),350)}}
-    if(b.el && b.el.getBoundingClientRect().right>=rB.right-6){st.mistakes++;st.score-=1;removeBox(b)}
+    if(!b.dragging && !b.stopped){
+      b.x += step; positionBox(b);
+    }
+    // scanner event
+    if(!b.scanned){
+      const r=b.el.getBoundingClientRect();
+      if(r.left < st.scannerX && r.right >= st.scannerX){
+        b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'),350);
+      }
+    }
+    // stop at end (no auto-penalty)
+    const rightEdge = b.el.getBoundingClientRect().right - rB.left;
+    const maxRight = rB.width - 6;
+    if(rightEdge >= maxRight){ b.stopped=true; b.x = maxRight - b.el.offsetWidth; positionBox(b); }
   }
   requestAnimationFrame(animate);
 }
-function tick(){st.tLeft-=1;timeEl.textContent=st.tLeft;if(st.tLeft<=0)end()}
+
+function tick(){ st.tLeft-=1; timeEl.textContent=st.tLeft; if(st.tLeft<=0) end(); }
 function start(){
   setScale();
   const cfg=getLevelConfig(level);
-  if(!topRow.children.length)buildRows(cfg.top,cfg.bottom);
-  st.running=true;st.tLeft=90;st.score=0;st.mistakes=0;st.boxes=[];st.nextId=1;
-  scoreEl.textContent='0';mistakesEl.textContent='0';timeEl.textContent='90';
+  if(!topRow.children.length) buildRows(cfg.top,cfg.bottom);
+  st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1; st.nudgeTicks=0;
+  scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
   [...document.querySelectorAll('.case')].forEach(n=>n.remove());
-  startBtn.disabled=true;startBtn.textContent='Running…';
-  st.timer=setInterval(tick,1000);requestAnimationFrame(animate);
+  startBtn.disabled=true; startBtn.textContent='Running…';
+  st.timer=setInterval(tick,1000); requestAnimationFrame(animate);
 }
-function end(){st.running=false;clearInterval(st.timer);startBtn.disabled=false;startBtn.textContent='Start Shift (90s)'}
+function end(){ st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)'; }
+
 function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
 
 startBtn.addEventListener('click',start);
-levelButtons.forEach(b=>b.addEventListener('click',()=>{const id=+b.dataset.level;levelButtons.forEach(x=>x.classList.toggle('active',+x.dataset.level===id));level=id;end();start();}));
+document.querySelectorAll('.lbtn').forEach(b=>b.addEventListener('click',()=>{const id=+b.dataset.level;document.querySelectorAll('.lbtn').forEach(x=>x.classList.toggle('active',+x.dataset.level===id));level=id;end();start();}));
+
 editBtn.onclick=()=>{const cfg=getLevelConfig(level);panelLevel.textContent=cfg.name;[t1.value,t2.value,t3.value]=cfg.top;[b1.value,b2.value,b3.value]=cfg.bottom;panel.style.display='block'}
 closeBtn.onclick=()=>panel.style.display='none';
 applyBtn.onclick=()=>{const cfg=getLevelConfig(level);const n={...cfg,top:[t1.value,t2.value,t3.value],bottom:[b1.value,b2.value,b3.value]};localStorage.setItem('sl_level_'+level,JSON.stringify(n));updateRowLabels(n.top,n.bottom);panel.style.display='none'}
