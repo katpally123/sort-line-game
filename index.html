@@ -1,61 +1,150 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SOrt-line (config-driven)</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header>
-    <h1>SOrt-line</h1>
-    <button id="btnConfig" title="Config Panel">⚙️</button>
-  </header>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
+<title>Sort Line — Advance on Pick</title>
+<style>
+:root{
+  --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --rail:#1e293b;
+  --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444;
+  /* runtime */
+  --ftpx:8px;                /* px / foot */
+  --beltHeight:260px;        /* ~5ft belt + QA strip */
+  --palletSize:140px;        /* > case size */
+  --caseW:104px; --caseH:66px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+.wrap{max-width:1280px;margin:calc(env(safe-area-inset-top,0) + 6px) auto 12px auto;padding:8px;display:flex;flex-direction:column;gap:10px}
+.hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel);border-radius:12px;padding:8px 10px}
+.hud>*{font-size:14px}
+.btn,.link,.lbtn{border-radius:10px;border:1px solid #334155;background:#111827;color:#e5e7eb;padding:8px 12px}
+.btn{background:#1f2937;border:0}
+.btn:disabled{opacity:.6}
+.levels{display:flex;gap:6px;margin-left:auto}
+.lbtn.active{outline:2px solid #22c55e}
 
-  <main>
-    <div id="stageWrap">
-      <div id="line" class="line"></div>
-      <div id="items"></div>
+.game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
+.stage{display:grid;grid-template-rows:160px var(--beltHeight) 160px;gap:8px}
+
+/* Pallets at END (top/bottom) */
+.rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;overflow:auto hidden;padding-inline:6px}
+.palletRow{display:inline-grid;grid-auto-flow:column;grid-template-columns:repeat(3,var(--palletSize));gap:calc(var(--ftpx)*0.8);padding:10px 6px}
+.pallet{width:var(--palletSize);height:var(--palletSize);border-radius:12px;background:linear-gradient(#0a1220,#0b1626);border:2px dashed #334155;display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
+.pallet.good{box-shadow:0 0 0 2px var(--good) inset}
+.pallet h3{position:absolute;top:6px;left:8px;margin:0;font-size:12px;color:#cbd5e1}
+.stack{width:calc(var(--palletSize)*0.6);height:calc(var(--palletSize)*0.6);border-radius:10px;background:repeating-linear-gradient(90deg,#1b2a43 0 16px,#132237 16px 18px);border:1px solid #334155}
+.qr{width:calc(var(--palletSize)*0.28);height:calc(var(--palletSize)*0.28);border-radius:4px;box-shadow:0 0 0 1px #94a3b8 inset;background:repeating-linear-gradient(0deg,#0f172a 0 3px,#e5e7eb 3px 6px),repeating-linear-gradient(90deg,#0f172a 0 3px,#e5e7eb 3px 6px)}
+.qr.scan{animation:scanflash .35s ease-out}
+@keyframes scanflash{0%{box-shadow:0 0 0 1px #94a3b8 inset}30%{box-shadow:0 0 18px 6px rgba(34,197,94,.45);background-color:rgba(34,197,94,.15)}100%{box-shadow:0 0 0 1px #94a3b8 inset;background-color:transparent}}
+
+/* Conveyor */
+.conveyor{position:relative;background:#0a0f1a;border-radius:12px;overflow:hidden}
+.rollers{position:absolute;inset:0;background:repeating-linear-gradient(90deg,#c7ccd4 0 18px,#aab1bb 18px 20px,#8e97a3 20px 22px);filter:saturate(.9) brightness(.9)}
+.rail{position:absolute;top:0;bottom:0;width:14px;background:var(--rail);opacity:.9}
+.rail.left{left:0}.rail.right{right:0}
+.marker{position:absolute;top:8px;font-size:12px;color:#cbd5e1;background:#111827;border:1px solid #334155;padding:2px 6px;border-radius:8px;z-index:2}
+.marker.start{left:8px}.marker.end{right:8px}
+
+/* Scanner at 30% */
+.scanner{position:absolute;top:16%;bottom:28%;left:30%;width:12px;z-index:1;background:linear-gradient(#0b3a22,#28a46a,#0b3a22);box-shadow:0 0 28px 10px rgba(34,197,94,.35);border-radius:6px}
+.sLabel{position:absolute;top:-14px;left:-30px;font-size:12px;padding:3px 8px;border-radius:8px;background:#052e17;color:#a7f3d0;border:1px solid #14532d}
+.trickle{position:absolute;top:8px;left:18px;font-size:12px;padding:3px 8px;border-radius:8px;background:#052e17;color:#a7f3d0;opacity:0;transition:opacity .25s}
+.trickle.show{opacity:1}
+
+/* QA lane */
+.qa{position:absolute;left:0;right:0;bottom:6px;height:calc(var(--ftpx)*2.2);border-top:2px dashed #856404;background:rgba(245,158,11,.08);display:flex;align-items:center;gap:8px;padding-left:8px;font-size:11px;color:#fcd34d;z-index:2}
+
+/* Cases */
+.case{position:absolute;top:50%;transform:translateY(-50%);width:var(--caseW);height:var(--caseH);border-radius:10px;background:#0c1a2e;border:2px solid #334155;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;touch-action:none;user-select:none}
+.tag{font-size:12px;padding:2px 8px;border-radius:999px;background:#111827;color:#cbd5e1;border:1px solid #334155}
+.hiddenTag{filter:blur(6px)}.hint{font-size:10px;color:#9ca3af}
+.def{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--warn);color:#111827;font-weight:900}
+.ghost{opacity:.75;outline:2px dashed #94a3b8}
+
+@media (max-width:560px){
+  .hud>*{font-size:12px}
+  .lbtn,.btn,.link{padding:7px 10px}
+  .stage{grid-template-rows:150px var(--beltHeight) 150px}
+}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="hud">
+    <button id="start" class="btn">Start Shift (90s)</button>
+    <div>⏱ <span id="time">90</span>s</div><div>✅ <span id="score">0</span></div><div>❌ <span id="mistakes">0</span></div>
+    <button id="edit" class="link">Edit Destinations</button>
+    <div class="levels">
+      <button class="lbtn active" data-level="1">Level 1</button>
+      <button class="lbtn" data-level="2">Level 2</button>
+      <button class="lbtn" data-level="3">Level 3</button>
     </div>
-  </main>
+  </div>
 
-  <!-- Config Panel -->
-  <dialog id="configDlg">
-    <form method="dialog">
-      <h3>Config Panel</h3>
-      <div class="grid">
-        <label>Line width (ft)
-          <input type="number" id="inpWidthFeet" step="0.1" />
-        </label>
-        <label>Trickle offset (0–1)
-          <input type="number" id="inpTrickle" step="0.05" min="0" max="1" />
-        </label>
-        <label>Speed (px/s)
-          <input type="number" id="inpSpeed" step="5" />
-        </label>
-        <label>Spawn every (ms)
-          <input type="number" id="inpSpawnMs" step="50" />
-        </label>
-        <label>Level
-          <select id="selLevel">
-            <option value="L1">L1 (slow)</option>
-            <option value="L2">L2 (base)</option>
-            <option value="L3">L3 (fast)</option>
-          </select>
-        </label>
-        <label>Stop at end
-          <input type="checkbox" id="chkStop" />
-        </label>
-      </div>
-      <menu>
-        <button id="btnSavePreset">Save Preset</button>
-        <button value="cancel">Close</button>
-      </menu>
-    </form>
-  </dialog>
+  <div class="game stage">
+    <div class="rowBox"><div id="topRow" class="palletRow"></div></div>
+    <div class="conveyor" id="belt">
+      <div class="rollers"></div><div class="rail left"></div><div class="rail right"></div>
+      <div class="marker start">Start of Line</div><div class="marker end">End of Line</div>
+      <div class="scanner"><div class="sLabel">Trickle Scanner</div><div id="trickle" class="trickle">Trickle scan</div></div>
+      <div id="qaLane" class="qa">QA lane: drop defective cases here first</div>
+    </div>
+    <div class="rowBox"><div id="bottomRow" class="palletRow"></div></div>
+  </div>
+</div>
 
-  <script src="engine.js"></script>
-  <script src="config-panel.js"></script>
-  <script src="main.js"></script>
-</body>
-</html>
+<!-- Edit panel -->
+<div class="panel" id="panel" style="display:none;position:fixed;right:10px;top:70px;background:#0b1220;border:1px solid #334155;border-radius:12px;padding:10px;width:min(92vw,290px);box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:9999">
+  <h4 style="margin:0 0 6px 0">Edit Destinations</h4>
+  <div class="small" id="panelLevel" style="margin-bottom:6px"></div>
+  <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div>
+      <strong>Top</strong>
+      <label style="display:flex;gap:6px;margin:6px 0">1 <input id="t1"/></label>
+      <label style="display:flex;gap:6px;margin:6px 0">2 <input id="t2"/></label>
+      <label style="display:flex;gap:6px;margin:6px 0">3 <input id="t3"/></label>
+    </div>
+    <div>
+      <strong>Bottom</strong>
+      <label style="display:flex;gap:6px;margin:6px 0">1 <input id="b1"/></label>
+      <label style="display:flex;gap:6px;margin:6px 0">2 <input id="b2"/></label>
+      <label style="display:flex;gap:6px;margin:6px 0">3 <input id="b3"/></label>
+    </div>
+  </div>
+  <div class="actions" style="display:flex;gap:8px;margin-top:8px">
+    <button id="apply" class="btn">Apply</button>
+    <button id="close" class="link">Close</button>
+  </div>
+  <div class="small">Saved per level (device-local).</div>
+</div>
+
+<script>
+(()=>{ /* (same JS as you pasted earlier) */
+const LINE_FEET=120, BELT_FEET=5, PALLET_FEET=4;
+const LEVELS={
+  1:{name:"Level 1 — Training", speed:60,  spawn:1800, top:["YYC4","YVR2","YEG2"], bottom:["YVR4","YXX1","YXX2"]},
+  2:{name:"Level 2 — Pro",      speed:90,  spawn:1300, top:["YYZ1","YVR2","YYC4"], bottom:["YEG2","YVR4","YXX2"]},
+  3:{name:"Level 3 — Rush",     speed:120, spawn:900,  top:["YVR4","YXX2","YEG2"], bottom:["YYC4","YYZ1","YVR2"]}
+};
+const belt=document.getElementById('belt'), qaLane=document.getElementById('qaLane'), trickle=document.getElementById('trickle');
+const topRow=document.getElementById('topRow'), bottomRow=document.getElementById('bottomRow');
+const startBtn=document.getElementById('start'), timeEl=document.getElementById('time'), scoreEl=document.getElementById('score'), mistakesEl=document.getElementById('mistakes');
+const editBtn=document.getElementById('edit'), panel=document.getElementById('panel'), panelLevel=document.getElementById('panelLevel');
+const t1=document.getElementById('t1'), t2=document.getElementById('t2'), t3=document.getElementById('t3'), b1=document.getElementById('b1'), b2=document.getElementById('b2'), b3=document.getElementById('b3');
+const applyBtn=document.getElementById('apply'), closeBtn=document.getElementById('close');
+const levelButtons=[...document.querySelectorAll('.lbtn')];
+let level=1;
+const st={running:false, tLeft:90, timer:null, score:0, mistakes:0, pxPerSec:60, spawnEveryMs:1800, lastSpawn:0, boxes:[], nextId:1, scannerX:0, nudgeTicks:0, nudgePerTick:0};
+function setScale(){const w=belt.getBoundingClientRect().width;const ftpx=w/LINE_FEET;document.documentElement.style.setProperty('--ftpx', ftpx+'px');const beltHeight=(BELT_FEET*ftpx)+(1.4*ftpx);document.documentElement.style.setProperty('--beltHeight', beltHeight+'px');const palletPx=Math.max(110, PALLET_FEET*ftpx*1.35);document.documentElement.style.setProperty('--palletSize', palletPx+'px');const caseW=Math.max(70, Math.min(104, window.innerWidth*0.22));const caseH=Math.max(48, Math.min(66, window.innerWidth*0.14));document.documentElement.style.setProperty('--caseW', caseW+'px');document.documentElement.style.setProperty('--caseH', caseH+'px');}
+addEventListener('resize', setScale);
+function mkPallet(name,row){const p=document.createElement('div');p.className='pallet';p.dataset.dest=name;p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;row.appendChild(p);}
+function buildRows(top,bottom){topRow.innerHTML='';bottomRow.innerHTML='';top.forEach(d=>mkPallet(d,topRow));bottom.forEach(d=>mkPallet(d,bottomRow));}
+function updateRowLabels(top,bottom){[...topRow.children].forEach((n,i)=>{n.dataset.dest=top[i];n.querySelector('h3').textContent=top[i];flash(n)});[...bottomRow.children].forEach((n,i)=>{n.dataset.dest=bottom[i];n.querySelector('h3').textContent=bottom[i];flash(n)})}
+function flash(n){n.style.outline='2px solid #22c55e';setTimeout(()=>n.style.outline='none',600)}
+const ALL_PALLETS=()=>[...document.querySelectorAll('.pallet')];
+function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
+function saveLevelConfig(l,c){localStorage.setItem('sl_level_'+l,JSON.stringify(c))}
+function setLevel(newLevel,restart=true){level=newLevel;const cfg=getLevelConfig(level);st.pxPerSec=cfg.speed;st.spawnEveryMs=cfg.spawn;updateRowLabels(cfg.top,cfg.bottom);levelButtons.forEach(b=>b.classList.toggle('active',+b.dataset.level===level));if(restart){end();start();}}
+function makeBox(){const cfg=getLevelConfig(level); const all=[...cfg.top,...cfg.bottom]; const dest=all[Math.floor(Math.random()*all.length)]; const hasDefect=Math.random()<0.2; return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false,revealed:false,stopped:false};}
+function renderBox(b){const el=document.createElement('div'); el.className='case'; el.dataset.id=b.id; el.innerHTML=`<div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>${b.hasDefect?`<div class="def">DEFECT</div>`:''}<div class="hint">${b.revealed?'':'Touch to reveal'}</div>`; belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);}
+function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
+function reveal(b){ if(b.revealed) return; b.revealed=true;
