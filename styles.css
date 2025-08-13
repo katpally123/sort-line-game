@@ -1,24 +1,95 @@
-:root { --line-width-ft: 5; }
-* { box-sizing: border-box; font-family: system-ui, sans-serif; }
-body { margin: 0; background:#0b1020; color:#eef2ff; }
-header { display:flex; align-items:center; gap:8px; padding:10px 14px; }
-#btnConfig { font-size:18px; padding:6px 10px; }
-main { display:flex; justify-content:center; }
-#stageWrap { position:relative; width:100%; max-width:980px; height:320px; border:1px solid #2a355b; margin:12px; border-radius:12px; background:#121a35; }
-.line { position:absolute; left:0; top:50%; transform:translateY(-50%); height:calc(var(--line-width-ft) * 12px); width:100%; background:linear-gradient(90deg,#1e2a52,#223062); border:1px solid #2a355b; border-radius:10px; }
-#items { position:absolute; inset:0; }
-.case, .pallet { position:absolute; top:0; left:0; border-radius:6px; border:1px solid #41508c; }
-.case { background:#3a63ff22; }
-.pallet { background:#ffd16622; border-color:#c49a3b; }
+/* ===== SOrt-line “classic” look ===== */
+:root{
+  --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --rail:#1e293b;
+  /* runtime scale (visual only) */
+  --ftpx:8px;            /* px per foot → matches your old setup   */
+  --beltHeight:260px;    /* ~5ft belt + QA strip feel               */
+  --tile:140px;          /* case step width (visual grid)           */
+}
 
-/* dialog */
-dialog { border:1px solid #334; border-radius:12px; padding:12px 14px; background:#0f1530; color:#eef2ff; }
-.grid { display:grid; grid-template-columns:repeat(2, minmax(200px, 1fr)); gap:10px; }
-label { display:flex; flex-direction:column; gap:4px; font-size:14px; }
-menu { display:flex; gap:10px; justify-content:flex-end; margin-top:10px; }
+*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px}
+#btnConfig{font-size:18px;padding:6px 10px;border-radius:10px;border:1px solid #334;background:#182038;color:#e5e7eb}
+#btnConfig:hover{filter:brightness(1.1)}
 
-/* mobile */
-@media (max-width:700px) {
-  #stageWrap { height:380px; }
-  .grid { grid-template-columns:1fr; }
+main{display:flex;justify-content:center}
+#stageWrap{
+  position:relative;width:100%;max-width:1280px;height:420px;margin:14px;
+  border:1px solid #223; background:#0f162d; border-radius:14px; overflow:hidden;
+}
+
+/* ==== BELT (with end caps, QA strip, grid tiles) ==== */
+.line{
+  position:absolute; left:4%; right:4%; top:50%; transform:translateY(-50%);
+  height:var(--beltHeight);
+  /* dark rubber + slight sheen */
+  background:
+    /* QA strip (soft, centered) */
+    radial-gradient(100% 70% at 50% 50%, #1b2546 0%, #1a2344 60%, #18223f 100%),
+    linear-gradient(180deg,#1b2546,#1a2447);
+  border:1px solid #2a355b; border-radius:16px; box-shadow:inset 0 0 0 1px #1a274b;
+}
+
+/* end caps */
+.line::before,.line::after{
+  content:""; position:absolute; top:0; width:48px; height:100%;
+  background:linear-gradient(180deg,#18233f,#1a2447); opacity:.85;
+}
+.line::before{ left:-24px; border-radius:16px 0 0 16px; }
+.line::after { right:-24px; border-radius:0 16px 16px 0; }
+
+/* tiled grid “case lanes” */
+.line{
+  /* transparent grid overlay using repeating gradient */
+  background-image:
+    /* grid tiles */
+    repeating-linear-gradient(
+      to right,
+      rgba(62, 92, 160, .22) 0,
+      rgba(62, 92, 160, .22) calc(var(--tile) - 1px),
+      rgba(62, 92, 160, .10) calc(var(--tile) - 1px),
+      rgba(62, 92, 160, .10) var(--tile)
+    ),
+    radial-gradient(100% 70% at 50% 50%, #1b2546 0%, #1a2344 60%, #18223f 100%),
+    linear-gradient(180deg,#1b2546,#1a2447);
+}
+
+/* ==== ITEMS ==== */
+#items{ position:absolute; inset:0; }
+
+/* shared look */
+.case,.pallet{
+  position:absolute; top:0; left:0; border-radius:12px;
+  border:1px solid #41508c; box-shadow:
+    0 1px 0 rgba(0,0,0,.25),
+    inset 0 0 0 1px rgba(65,80,140,.25);
+}
+
+/* cases slightly glowing blue, pallets amber & larger (from config sizes) */
+.case{ background:#3a63ff33; }
+.pallet{
+  background:#ffd16633; border-color:#c49a3b;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,.25),
+    inset 0 0 0 1px rgba(196,154,59,.35);
+}
+
+/* subtle highlight when item nears the right end (QA area vibe) */
+.case:hover,.pallet:hover{ filter:brightness(1.15) }
+
+/* ==== dialog (config panel) ==== */
+dialog{
+  border:1px solid #334; border-radius:12px; padding:12px 14px;
+  background:#0f1530; color:#eef2ff; max-width:560px;
+}
+.grid{ display:grid; grid-template-columns:repeat(2,minmax(220px,1fr)); gap:10px }
+label{ display:flex; flex-direction:column; gap:4px; font-size:14px }
+menu{ display:flex; gap:10px; justify-content:flex-end; margin-top:10px }
+button{ cursor:pointer }
+
+/* ==== mobile ==== */
+@media (max-width:700px){
+  #stageWrap{ height:480px }
+  .grid{ grid-template-columns:1fr }
 }
