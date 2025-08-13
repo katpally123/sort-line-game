@@ -6,10 +6,10 @@
 :root{
   --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9ca3af; --rail:#1e293b;
   --scan:#22c55e; --warn:#f59e0b; --good:#16a34a; --bad:#ef4444;
-  /* runtime */
-  --ftpx:8px;                /* px / foot */
-  --beltHeight:260px;        /* ~5ft belt + QA strip */
-  --palletSize:140px;        /* > case size */
+  /* runtime visuals */
+  --ftpx:8px;                 /* px / foot */
+  --beltHeight:260px;         /* ~5ft belt + QA strip */
+  --palletSize:140px;         /* > case size */
   --caseW:104px; --caseH:66px;
 }
 *{box-sizing:border-box}
@@ -26,7 +26,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 .game{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
 .stage{display:grid;grid-template-rows:160px var(--beltHeight) 160px;gap:8px}
 
-/* Pallets at END (top/bottom) */
+/* Pallets rows (END of line) */
 .rowBox{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;overflow:auto hidden;padding-inline:6px}
 .palletRow{display:inline-grid;grid-auto-flow:column;grid-template-columns:repeat(3,var(--palletSize));gap:calc(var(--ftpx)*0.8);padding:10px 6px}
 .pallet{width:var(--palletSize);height:var(--palletSize);border-radius:12px;background:linear-gradient(#0a1220,#0b1626);border:2px dashed #334155;display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
@@ -128,9 +128,10 @@ const LEVELS={
   3:{name:"Level 3 — Rush",     speed:120, spawn:900,  top:["YVR4","YXX2","YEG2"], bottom:["YYC4","YYZ1","YVR2"]}
 };
 
-/* ===== New queue/nudge constants ===== */
-const MIN_GAP = 10;   // keep at least this many px between cases
-const EDGE_PAD = 6;   // padding from the right edge
+/* ===== Spacing & queue rules ===== */
+const CASE_START_X = 14;   // where new cases appear
+const EDGE_PAD     = 6;    // right edge padding before end
+const MIN_GAP      = 12;   // pixels between cases while moving and at end
 
 /* ===== DOM ===== */
 const belt=document.getElementById('belt'), qaLane=document.getElementById('qaLane'), trickle=document.getElementById('trickle');
@@ -145,9 +146,15 @@ const levelButtons=[...document.querySelectorAll('.lbtn')];
 let level=1;
 const st={
   running:false, tLeft:90, timer:null, score:0, mistakes:0,
-  pxPerSec:60, spawnEveryMs:1800, lastSpawn:0, boxes:[], nextId:1,
-  scannerX:0, nudgeTicks:0, nudgePerTick:0
+  pxPerSec:60, spawnEveryMs:1800, lastSpawn:0,
+  boxes:[], nextId:1, scannerX:0,
+  nudgeTicks:0, nudgePerTick:0,
+  pendingSpawns:0                    // queued spawns (e.g., from pick) if no room yet
 };
+
+/* ===== utils ===== */
+function byXAsc(a,b){ return a.x - b.x; }
+function byXDesc(a,b){ return b.x - a.x; }
 
 /* ===== Scale feet → px ===== */
 function setScale(){
@@ -162,7 +169,7 @@ function setScale(){
 }
 addEventListener('resize', setScale);
 
-/* ===== Pallets ===== */
+/* ===== Pallets UI ===== */
 function mkPallet(name,row){const p=document.createElement('div');p.className='pallet';p.dataset.dest=name;p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;row.appendChild(p);}
 function buildRows(top,bottom){topRow.innerHTML='';bottomRow.innerHTML='';top.forEach(d=>mkPallet(d,topRow));bottom.forEach(d=>mkPallet(d,bottomRow));}
 function updateRowLabels(top,bottom){[...topRow.children].forEach((n,i)=>{n.dataset.dest=top[i];n.querySelector('h3').textContent=top[i];flash(n)});[...bottomRow.children].forEach((n,i)=>{n.dataset.dest=bottom[i];n.querySelector('h3').textContent=bottom[i];flash(n)})}
@@ -171,14 +178,13 @@ const ALL_PALLETS=()=>[...document.querySelectorAll('.pallet')];
 
 /* ===== Level config ===== */
 function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
-function saveLevelConfig(l,c){localStorage.setItem('sl_level_'+l,JSON.stringify(c))}
 function setLevel(newLevel,restart=true){level=newLevel;const cfg=getLevelConfig(level);st.pxPerSec=cfg.speed;st.spawnEveryMs=cfg.spawn;updateRowLabels(cfg.top,cfg.bottom);levelButtons.forEach(b=>b.classList.toggle('active',+b.dataset.level===level));if(restart){end();start();}}
 
 /* ===== Cases ===== */
 function makeBox(){
   const cfg=getLevelConfig(level); const all=[...cfg.top,...cfg.bottom];
   const dest=all[Math.floor(Math.random()*all.length)]; const hasDefect=Math.random()<0.2;
-  return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false, revealed:false, stopped:false};
+  return {id:st.nextId++,dest,hasDefect,inspected:false,x:CASE_START_X,el:null,dragging:false,scanned:false, revealed:false, stopped:false};
 }
 function renderBox(b){
   const el=document.createElement('div'); el.className='case'; el.dataset.id=b.id;
@@ -187,6 +193,16 @@ function renderBox(b){
 }
 function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
 function reveal(b){ if(b.revealed) return; b.revealed=true; const t=b.el.querySelector('.tag'); t.classList.remove('hiddenTag'); t.querySelector('.lbl').textContent=b.dest; b.el.querySelector('.hint')?.remove(); }
+
+/* Spawn control: only if start has room (keeps spacing uniform) */
+function startHasRoom(){
+  const leftmost = st.boxes.slice().sort(byXAsc)[0];
+  const firstW   = leftmost?.el?.offsetWidth || 0;
+  return !leftmost || (leftmost.x >= CASE_START_X + firstW + MIN_GAP + 2);
+}
+function spawnOne(){
+  const b = makeBox(); st.boxes.push(b); renderBox(b);
+}
 
 /* ===== Drop targets ===== */
 function findDrop(x,y){
@@ -197,11 +213,11 @@ function findDrop(x,y){
 function clearHighlights(){ALL_PALLETS().forEach(p=>p.classList.remove('good')); qaLane.style.outline='none';}
 function highlightAt(x,y){clearHighlights(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b';}
 
-/* ===== Advance on pick (impulse + spawn) ===== */
+/* ===== Advance on pick (impulse + queued spawn) ===== */
 function advanceOnPick(){
-  st.nudgeTicks = 10;                                 // duration of impulse frames
-  st.nudgePerTick = Math.max(2, st.pxPerSec / 40);    // strength of impulse
-  const b = makeBox(); st.boxes.push(b); renderBox(b);
+  st.nudgeTicks = 10;                               // duration of impulse
+  st.nudgePerTick = Math.max(2, st.pxPerSec/40);    // impulse strength
+  st.pendingSpawns += 1;                             // request a spawn when room is available
 }
 
 /* ===== Drag & drop ===== */
@@ -215,7 +231,7 @@ function enableDrag(box){
     ghost=el.cloneNode(true); ghost.classList.add('ghost');
     ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost);
     highlightAt(e.clientX,e.clientY);
-    advanceOnPick(); // << trigger belt advance + spawn new case
+    advanceOnPick();
   };
   const move=e=>{ if(!drag||!ghost) return; const dx=e.clientX-sx, dy=e.clientY-sy; ghost.style.left=(ox+dx)+'px'; ghost.style.top=(oy+dy)+'px'; highlightAt(e.clientX,e.clientY); };
   const up=e=>{
@@ -227,7 +243,7 @@ function enableDrag(box){
       else if(destTarget===box.dest){ st.score+=(box.inspected?2:1); const qr=drop.node.querySelector('.qr'); qr.classList.remove('scan'); void qr.offsetWidth; qr.classList.add('scan'); removeBox(box); }
       else { st.score-=1; st.mistakes++; removeBox(box); }
     } else if(drop?.type==='qa'){
-      if(box.hasDefect && !box.inspected){ box.inspected=true; } // returns to buffer/end
+      if(box.hasDefect && !box.inspected){ box.inspected=true; }
     }
     scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights();
   };
@@ -235,51 +251,58 @@ function enableDrag(box){
 }
 function removeBox(b){ b.el?.remove(); st.boxes = st.boxes.filter(x=>x.id!==b.id); }
 
-/* ===== Main animation (queue logic) ===== */
+/* ===== Animation ===== */
 function animate(ts){
   if(!st.running) return;
 
-  // trickle spawn
+  // Trickle spawn schedule
   if(!st.lastSpawn) st.lastSpawn=ts;
-  if(ts-st.lastSpawn>=st.spawnEveryMs){ const nb=makeBox(); st.boxes.push(nb); renderBox(nb); st.lastSpawn=ts; }
+  const due = (ts - st.lastSpawn) >= st.spawnEveryMs;
+  if((due || st.pendingSpawns>0) && startHasRoom()){
+    spawnOne();
+    if(due) st.lastSpawn = ts;
+    if(st.pendingSpawns>0) st.pendingSpawns--;
+  } else if(due && !startHasRoom()){
+    // wait but don't lose the scheduled spawn
+    st.lastSpawn = ts; st.pendingSpawns++;
+  }
 
   const rB=belt.getBoundingClientRect();
   st.scannerX = rB.left + rB.width*0.30;
 
-  // base conveyor step + optional nudge
+  // Base conveyor move + optional impulse
   let delta = st.pxPerSec/60;
   if(st.nudgeTicks>0){ delta += st.nudgePerTick; st.nudgeTicks--; }
 
-  // left→right so each box respects the one ahead
-  const list = st.boxes.slice().sort((a,b)=>a.x - b.x);
+  // Move from right → left so spacing propagates backwards (follow-the-leader)
+  const list = st.boxes.slice().sort(byXDesc);
 
   for(let i=0;i<list.length;i++){
-    const b = list[i];
-    const w = b.el?.offsetWidth || 0;
+    const me = list[i];
+    const w  = me.el?.offsetWidth || 0;
 
-    if(!b.dragging){
-      let target = b.stopped ? b.x : b.x + delta;
+    if(!me.dragging){
+      let target = me.stopped ? me.x : me.x + delta;
 
-      // hard stop near the end
+      // stop before end
       const endLimit = rB.width - EDGE_PAD - w;
-      if(target > endLimit){ target = endLimit; b.stopped = true; }
+      if(target > endLimit){ target = endLimit; me.stopped = true; }
 
-      // keep a gap behind the box ahead
-      if(i < list.length - 1){
-        const ahead = list[i+1];
+      // keep MIN_GAP from the box ahead (to the right)
+      if(i>0){
+        const ahead = list[i-1]; // already moved this frame
         const maxBeforeAhead = ahead.x - w - MIN_GAP;
-        if(target > maxBeforeAhead) target = maxBeforeAhead;
+        if(target > maxBeforeAhead) target = Math.max(me.x, maxBeforeAhead);
       }
 
-      if(target < b.x) target = b.x; // never move backwards
-      b.x = target; positionBox(b);
+      me.x = target; positionBox(me);
     }
 
-    // trickle scanner flash when crossing 30%
-    if(!b.scanned){
-      const r=b.el.getBoundingClientRect();
+    // one-time trickle flash
+    if(!me.scanned){
+      const r=me.el.getBoundingClientRect();
       if(r.left < st.scannerX && r.right >= st.scannerX){
-        b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'),350);
+        me.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'),350);
       }
     }
   }
@@ -294,10 +317,10 @@ function start(){
   const cfg=getLevelConfig(level);
   if(!topRow.children.length) buildRows(cfg.top,cfg.bottom);
 
-  // spawn one immediately so the belt never looks empty
-  const first = makeBox(); st.boxes.push(first); renderBox(first);
+  // spawn one if there's room so belt isn't empty at load
+  if(startHasRoom()) spawnOne();
 
-  st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.nextId=2; st.nudgeTicks=0;
+  st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.nextId=st.boxes.length?st.boxes[st.boxes.length-1].id+1:1;
   scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
   startBtn.disabled=true; startBtn.textContent='Running…';
   st.timer=setInterval(tick,1000); requestAnimationFrame(animate);
@@ -313,10 +336,7 @@ applyBtn.onclick=()=>{const cfg=getLevelConfig(level);const n={...cfg,top:[t1.va
 
 /* ===== Boot ===== */
 (function init(){setScale();const cfg=getLevelConfig(level);buildRows(cfg.top,cfg.bottom)})();
-addEventListener('load', () => start());  // auto-start on load
-
-/* ===== Saved level config helper ===== */
-function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
+addEventListener('load', () => start());
 
 })();
 </script>
