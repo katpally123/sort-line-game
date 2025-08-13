@@ -118,13 +118,21 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 </div>
 
 <script>
-(()=>{ /* (same JS as you pasted earlier) */
+(()=>{
+
+/* ===== Dimensions & Levels ===== */
 const LINE_FEET=120, BELT_FEET=5, PALLET_FEET=4;
 const LEVELS={
   1:{name:"Level 1 — Training", speed:60,  spawn:1800, top:["YYC4","YVR2","YEG2"], bottom:["YVR4","YXX1","YXX2"]},
   2:{name:"Level 2 — Pro",      speed:90,  spawn:1300, top:["YYZ1","YVR2","YYC4"], bottom:["YEG2","YVR4","YXX2"]},
   3:{name:"Level 3 — Rush",     speed:120, spawn:900,  top:["YVR4","YXX2","YEG2"], bottom:["YYC4","YYZ1","YVR2"]}
 };
+
+/* ===== New queue/nudge constants ===== */
+const MIN_GAP = 10;   // keep at least this many px between cases
+const EDGE_PAD = 6;   // padding from the right edge
+
+/* ===== DOM ===== */
 const belt=document.getElementById('belt'), qaLane=document.getElementById('qaLane'), trickle=document.getElementById('trickle');
 const topRow=document.getElementById('topRow'), bottomRow=document.getElementById('bottomRow');
 const startBtn=document.getElementById('start'), timeEl=document.getElementById('time'), scoreEl=document.getElementById('score'), mistakesEl=document.getElementById('mistakes');
@@ -132,66 +140,184 @@ const editBtn=document.getElementById('edit'), panel=document.getElementById('pa
 const t1=document.getElementById('t1'), t2=document.getElementById('t2'), t3=document.getElementById('t3'), b1=document.getElementById('b1'), b2=document.getElementById('b2'), b3=document.getElementById('b3');
 const applyBtn=document.getElementById('apply'), closeBtn=document.getElementById('close');
 const levelButtons=[...document.querySelectorAll('.lbtn')];
+
+/* ===== State ===== */
 let level=1;
-const st={running:false, tLeft:90, timer:null, score:0, mistakes:0, pxPerSec:60, spawnEveryMs:1800, lastSpawn:0, boxes:[], nextId:1, scannerX:0, nudgeTicks:0, nudgePerTick:0};
-function setScale(){const w=belt.getBoundingClientRect().width;const ftpx=w/LINE_FEET;document.documentElement.style.setProperty('--ftpx', ftpx+'px');const beltHeight=(BELT_FEET*ftpx)+(1.4*ftpx);document.documentElement.style.setProperty('--beltHeight', beltHeight+'px');const palletPx=Math.max(110, PALLET_FEET*ftpx*1.35);document.documentElement.style.setProperty('--palletSize', palletPx+'px');const caseW=Math.max(70, Math.min(104, window.innerWidth*0.22));const caseH=Math.max(48, Math.min(66, window.innerWidth*0.14));document.documentElement.style.setProperty('--caseW', caseW+'px');document.documentElement.style.setProperty('--caseH', caseH+'px');}
+const st={
+  running:false, tLeft:90, timer:null, score:0, mistakes:0,
+  pxPerSec:60, spawnEveryMs:1800, lastSpawn:0, boxes:[], nextId:1,
+  scannerX:0, nudgeTicks:0, nudgePerTick:0
+};
+
+/* ===== Scale feet → px ===== */
+function setScale(){
+  const w=belt.getBoundingClientRect().width;
+  const ftpx=w/LINE_FEET; document.documentElement.style.setProperty('--ftpx', ftpx+'px');
+  const beltHeight=(BELT_FEET*ftpx)+(1.4*ftpx); document.documentElement.style.setProperty('--beltHeight', beltHeight+'px');
+  const palletPx=Math.max(110, PALLET_FEET*ftpx*1.35); document.documentElement.style.setProperty('--palletSize', palletPx+'px');
+  const caseW=Math.max(70, Math.min(104, window.innerWidth*0.22));
+  const caseH=Math.max(48, Math.min(66, window.innerWidth*0.14));
+  document.documentElement.style.setProperty('--caseW', caseW+'px');
+  document.documentElement.style.setProperty('--caseH', caseH+'px');
+}
 addEventListener('resize', setScale);
+
+/* ===== Pallets ===== */
 function mkPallet(name,row){const p=document.createElement('div');p.className='pallet';p.dataset.dest=name;p.innerHTML=`<h3>${name}</h3><div class="qr"></div><div class="stack"></div>`;row.appendChild(p);}
 function buildRows(top,bottom){topRow.innerHTML='';bottomRow.innerHTML='';top.forEach(d=>mkPallet(d,topRow));bottom.forEach(d=>mkPallet(d,bottomRow));}
 function updateRowLabels(top,bottom){[...topRow.children].forEach((n,i)=>{n.dataset.dest=top[i];n.querySelector('h3').textContent=top[i];flash(n)});[...bottomRow.children].forEach((n,i)=>{n.dataset.dest=bottom[i];n.querySelector('h3').textContent=bottom[i];flash(n)})}
 function flash(n){n.style.outline='2px solid #22c55e';setTimeout(()=>n.style.outline='none',600)}
 const ALL_PALLETS=()=>[...document.querySelectorAll('.pallet')];
+
+/* ===== Level config ===== */
 function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
 function saveLevelConfig(l,c){localStorage.setItem('sl_level_'+l,JSON.stringify(c))}
 function setLevel(newLevel,restart=true){level=newLevel;const cfg=getLevelConfig(level);st.pxPerSec=cfg.speed;st.spawnEveryMs=cfg.spawn;updateRowLabels(cfg.top,cfg.bottom);levelButtons.forEach(b=>b.classList.toggle('active',+b.dataset.level===level));if(restart){end();start();}}
-function makeBox(){const cfg=getLevelConfig(level); const all=[...cfg.top,...cfg.bottom]; const dest=all[Math.floor(Math.random()*all.length)]; const hasDefect=Math.random()<0.2; return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false,revealed:false,stopped:false};}
-function renderBox(b){const el=document.createElement('div'); el.className='case'; el.dataset.id=b.id; el.innerHTML=`<div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>${b.hasDefect?`<div class="def">DEFECT</div>`:''}<div class="hint">${b.revealed?'':'Touch to reveal'}</div>`; belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);}
+
+/* ===== Cases ===== */
+function makeBox(){
+  const cfg=getLevelConfig(level); const all=[...cfg.top,...cfg.bottom];
+  const dest=all[Math.floor(Math.random()*all.length)]; const hasDefect=Math.random()<0.2;
+  return {id:st.nextId++,dest,hasDefect,inspected:false,x:14,el:null,dragging:false,scanned:false, revealed:false, stopped:false};
+}
+function renderBox(b){
+  const el=document.createElement('div'); el.className='case'; el.dataset.id=b.id;
+  el.innerHTML=`<div class="tag ${b.revealed?'':'hiddenTag'}"><span class="lbl">${b.revealed?b.dest:'????'}</span></div>${b.hasDefect?`<div class="def">DEFECT</div>`:''}<div class="hint">${b.revealed?'':'Touch to reveal'}</div>`;
+  belt.appendChild(el); b.el=el; positionBox(b); enableDrag(b);
+}
 function positionBox(b){ if(b.el) b.el.style.left=(b.x|0)+'px'; }
 function reveal(b){ if(b.revealed) return; b.revealed=true; const t=b.el.querySelector('.tag'); t.classList.remove('hiddenTag'); t.querySelector('.lbl').textContent=b.dest; b.el.querySelector('.hint')?.remove(); }
-function findDrop(x,y){for(const p of ALL_PALLETS()){const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p};} const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane}; return null;}
+
+/* ===== Drop targets ===== */
+function findDrop(x,y){
+  for(const p of ALL_PALLETS()){const r=p.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return {type:'pallet',node:p};}
+  const q=qaLane.getBoundingClientRect(); if(x>=q.left&&x<=q.right&&y>=q.top&&y<=q.bottom) return {type:'qa',node:qaLane};
+  return null;
+}
 function clearHighlights(){ALL_PALLETS().forEach(p=>p.classList.remove('good')); qaLane.style.outline='none';}
 function highlightAt(x,y){clearHighlights(); const t=findDrop(x,y); if(t?.type==='pallet') t.node.classList.add('good'); if(t?.type==='qa') qaLane.style.outline='2px solid #f59e0b';}
-function advanceOnPick(){ st.nudgeTicks = 18; st.nudgePerTick = Math.max(1.5, st.pxPerSec/60); const b = makeBox(); st.boxes.push(b); renderBox(b); }
-function enableDrag(box){ let ghost=null,sx=0,sy=0,ox=0,oy=0,drag=false; const el=box.el;
-  const down=e=>{ if(!st.running) return; reveal(box); drag=true; box.dragging=true; el.setPointerCapture(e.pointerId); const r=el.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top; ghost=el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost); highlightAt(e.clientX,e.clientY); advanceOnPick(); };
+
+/* ===== Advance on pick (impulse + spawn) ===== */
+function advanceOnPick(){
+  st.nudgeTicks = 10;                                 // duration of impulse frames
+  st.nudgePerTick = Math.max(2, st.pxPerSec / 40);    // strength of impulse
+  const b = makeBox(); st.boxes.push(b); renderBox(b);
+}
+
+/* ===== Drag & drop ===== */
+function enableDrag(box){
+  let ghost=null,sx=0,sy=0,ox=0,oy=0,drag=false; const el=box.el;
+  const down=e=>{
+    if(!st.running) return;
+    reveal(box);
+    drag=true; box.dragging=true; el.setPointerCapture(e.pointerId);
+    const r=el.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+    ghost=el.cloneNode(true); ghost.classList.add('ghost');
+    ghost.style.position='fixed'; ghost.style.left=ox+'px'; ghost.style.top=oy+'px'; ghost.style.zIndex=9999; document.body.appendChild(ghost);
+    highlightAt(e.clientX,e.clientY);
+    advanceOnPick(); // << trigger belt advance + spawn new case
+  };
   const move=e=>{ if(!drag||!ghost) return; const dx=e.clientX-sx, dy=e.clientY-sy; ghost.style.left=(ox+dx)+'px'; ghost.style.top=(oy+dy)+'px'; highlightAt(e.clientX,e.clientY); };
-  const up=e=>{ if(!drag) return; drag=false; box.dragging=false; if(ghost){ghost.remove(); ghost=null;} const drop=findDrop(e.clientX,e.clientY);
-    if(drop?.type==='pallet'){ const destTarget=drop.node.dataset.dest;
+  const up=e=>{
+    if(!drag) return; drag=false; box.dragging=false; if(ghost){ghost.remove(); ghost=null;}
+    const drop=findDrop(e.clientX,e.clientY);
+    if(drop?.type==='pallet'){
+      const destTarget=drop.node.dataset.dest;
       if(box.hasDefect && !box.inspected){ st.score-=2; st.mistakes++; removeBox(box); }
       else if(destTarget===box.dest){ st.score+=(box.inspected?2:1); const qr=drop.node.querySelector('.qr'); qr.classList.remove('scan'); void qr.offsetWidth; qr.classList.add('scan'); removeBox(box); }
       else { st.score-=1; st.mistakes++; removeBox(box); }
-    } else if(drop?.type==='qa'){ if(box.hasDefect && !box.inspected){ box.inspected=true; } }
-    scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights(); };
+    } else if(drop?.type==='qa'){
+      if(box.hasDefect && !box.inspected){ box.inspected=true; } // returns to buffer/end
+    }
+    scoreEl.textContent=st.score; mistakesEl.textContent=st.mistakes; clearHighlights();
+  };
   el.addEventListener('pointerdown',down); addEventListener('pointermove',move); addEventListener('pointerup',up);
 }
 function removeBox(b){ b.el?.remove(); st.boxes = st.boxes.filter(x=>x.id!==b.id); }
+
+/* ===== Main animation (queue logic) ===== */
 function animate(ts){
-  if(!st.running) return; if(!st.lastSpawn) st.lastSpawn=ts;
+  if(!st.running) return;
+
+  // trickle spawn
+  if(!st.lastSpawn) st.lastSpawn=ts;
   if(ts-st.lastSpawn>=st.spawnEveryMs){ const nb=makeBox(); st.boxes.push(nb); renderBox(nb); st.lastSpawn=ts; }
-  const rB=belt.getBoundingClientRect(); st.scannerX = rB.left + rB.width*0.30;
-  if(st.nudgeTicks>0){ for(const b of st.boxes){ if(!b.dragging && !b.stopped){ b.x += st.nudgePerTick; const maxRight = rB.width - 6; if((b.x + (b.el?.offsetWidth||0)) >= maxRight){ b.x = maxRight - (b.el?.offsetWidth||0); b.stopped = true; } positionBox(b);} } st.nudgeTicks--; }
-  const step = st.pxPerSec/60;
-  for(const b of st.boxes){
-    if(!b.dragging && !b.stopped){ b.x += step; positionBox(b); }
-    if(!b.scanned){ const r=b.el.getBoundingClientRect(); if(r.left < st.scannerX && r.right >= st.scannerX){ b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'),350); } }
-    const rightEdge = b.el.getBoundingClientRect().right - rB.left; const maxRight = rB.width - 6;
-    if(rightEdge >= maxRight){ b.stopped=true; b.x = maxRight - b.el.offsetWidth; positionBox(b); }
+
+  const rB=belt.getBoundingClientRect();
+  st.scannerX = rB.left + rB.width*0.30;
+
+  // base conveyor step + optional nudge
+  let delta = st.pxPerSec/60;
+  if(st.nudgeTicks>0){ delta += st.nudgePerTick; st.nudgeTicks--; }
+
+  // left→right so each box respects the one ahead
+  const list = st.boxes.slice().sort((a,b)=>a.x - b.x);
+
+  for(let i=0;i<list.length;i++){
+    const b = list[i];
+    const w = b.el?.offsetWidth || 0;
+
+    if(!b.dragging){
+      let target = b.stopped ? b.x : b.x + delta;
+
+      // hard stop near the end
+      const endLimit = rB.width - EDGE_PAD - w;
+      if(target > endLimit){ target = endLimit; b.stopped = true; }
+
+      // keep a gap behind the box ahead
+      if(i < list.length - 1){
+        const ahead = list[i+1];
+        const maxBeforeAhead = ahead.x - w - MIN_GAP;
+        if(target > maxBeforeAhead) target = maxBeforeAhead;
+      }
+
+      if(target < b.x) target = b.x; // never move backwards
+      b.x = target; positionBox(b);
+    }
+
+    // trickle scanner flash when crossing 30%
+    if(!b.scanned){
+      const r=b.el.getBoundingClientRect();
+      if(r.left < st.scannerX && r.right >= st.scannerX){
+        b.scanned=true; trickle.classList.add('show'); setTimeout(()=>trickle.classList.remove('show'),350);
+      }
+    }
   }
+
   requestAnimationFrame(animate);
 }
+
+/* ===== Clock, start/stop ===== */
 function tick(){ st.tLeft-=1; timeEl.textContent=st.tLeft; if(st.tLeft<=0) end(); }
-function start(){ setScale(); const cfg=getLevelConfig(level); if(!topRow.children.length) buildRows(cfg.top,cfg.bottom);
-  st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.boxes=[]; st.nextId=1; st.nudgeTicks=0;
-  scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90'; [...document.querySelectorAll('.case')].forEach(n=>n.remove());
-  startBtn.disabled=true; startBtn.textContent='Running…'; st.timer=setInterval(tick,1000); requestAnimationFrame(animate); }
+function start(){
+  setScale();
+  const cfg=getLevelConfig(level);
+  if(!topRow.children.length) buildRows(cfg.top,cfg.bottom);
+
+  // spawn one immediately so the belt never looks empty
+  const first = makeBox(); st.boxes.push(first); renderBox(first);
+
+  st.running=true; st.tLeft=90; st.score=0; st.mistakes=0; st.nextId=2; st.nudgeTicks=0;
+  scoreEl.textContent='0'; mistakesEl.textContent='0'; timeEl.textContent='90';
+  startBtn.disabled=true; startBtn.textContent='Running…';
+  st.timer=setInterval(tick,1000); requestAnimationFrame(animate);
+}
 function end(){ st.running=false; clearInterval(st.timer); startBtn.disabled=false; startBtn.textContent='Start Shift (90s)'; }
+
+/* ===== Wire UI ===== */
 startBtn.addEventListener('click',start);
 document.querySelectorAll('.lbtn').forEach(b=>b.addEventListener('click',()=>{const id=+b.dataset.level;document.querySelectorAll('.lbtn').forEach(x=>x.classList.toggle('active',+x.dataset.level===id));level=id;end();start();}));
 editBtn.onclick=()=>{const cfg=getLevelConfig(level);panelLevel.textContent=cfg.name;[t1.value,t2.value,t3.value]=cfg.top;[b1.value,b2.value,b3.value]=cfg.bottom;panel.style.display='block'}
 closeBtn.onclick=()=>panel.style.display='none';
 applyBtn.onclick=()=>{const cfg=getLevelConfig(level);const n={...cfg,top:[t1.value,t2.value,t3.value],bottom:[b1.value,b2.value,b3.value]};localStorage.setItem('sl_level_'+level,JSON.stringify(n));updateRowLabels(n.top,n.bottom);panel.style.display='none'}
+
+/* ===== Boot ===== */
 (function init(){setScale();const cfg=getLevelConfig(level);buildRows(cfg.top,cfg.bottom)})();
+addEventListener('load', () => start());  // auto-start on load
+
+/* ===== Saved level config helper ===== */
 function getLevelConfig(l){const key='sl_level_'+l;const saved=JSON.parse(localStorage.getItem(key)||'{}');const base=LEVELS[l];return {name:base.name,speed:saved.speed??base.speed,spawn:saved.spawn??base.spawn,top:saved.top??base.top,bottom:saved.bottom??base.bottom}}
+
 })();
 </script>
 </body></html>
